@@ -1,8 +1,8 @@
-# StateFusion
+# CFWeaver
 
-**Note: StateFusion is in development and probably going to change a lot in its first few weeks!**
+**Note: CFWeaver is in development and probably going to change a lot in its first few weeks!**
 
-StateFusion is a tool to generate test scenarios for a combinatorial, state-result approach to covering tests. This is a form of combinatorial testing that utilizes state-result modeling.
+CFWeaver is a tool to generate test scenarios for a combinatorial, state-result approach to covering tests. This is a form of combinatorial testing that utilizes state-result modeling.
 
 ## More Detailed Explanation
 
@@ -10,13 +10,13 @@ StateFusion is a tool to generate test scenarios for a combinatorial, state-resu
 
 **State-Based Testing** is not formally defined at a general level, but would encompass various methods of modeling the potential states of a system to discover test paths. [State-transition testing](https://www.geeksforgeeks.org/state-transition-testing/) would be a well-known form of such a category, which generates tests to cover transitions between states in a state machine.
 
-StateFusion is neither a pairwise nor a state-transition testing tool. However, it does support a **combinatorial** and **state-based** method to generating test scenarios for systems that can be modeled as a **series of decisions**.
+CFWeaver is neither a pairwise nor a state-transition testing tool. However, it does support a **combinatorial** and **state-based** method to generating test scenarios for systems that can be modeled as a **series of decisions**.
 
 By way of example, let's suppose we have a REST API which exposes a GET endpoint for some `Item` resource. This system can be modeled as a **series of decisions**: it will authorize the request, validate it, get the resource from the database, check that the authorized caller has access to the resource, and ultimately return the resource. Each step in this series could have many potential results; authorization can succeed or fail, as can validation; the database query could yield the resource, not find it, or error; finally, the caller might or might not have access to the resource.
 
 One or more **conditions** can cause the various decisions to yield their different potential **results**, and as testers we expect our endpoint to respond in different ways when it encounters these different states. If the request is not valid we want to return 400, if we can't find the resource we want to return 404, and so on.
 
-StateFusion takes as input a model of this **series of decisions**, the **conditions** which cause them, and the expected **results** of the system when it encounters the various states. From this input, it combinatorially generates all of the potential states the system might encounter, along with the expected results and conditions which cause them.
+CFWeaver takes as input a model of this **series of decisions**, the **conditions** which cause them, and the expected **results** of the system when it encounters the various states. From this input, it combinatorially generates all of the potential states the system might encounter, along with the expected results and conditions which cause them.
 
 ## How it Works
 
@@ -31,7 +31,7 @@ The model of the system is made in simple (specialized) Markdown:
 * Authorize: Success = 200 | Failure = 401 ? I am not authorized to access the specific item
 ```
 
-StateFusion then generates the state-result table, as well as a Mermaid diagram showing the decision flow:
+CFWeaver then generates the state-result table, as well as a Mermaid diagram showing the decision flow:
 
 ```mermaid
 stateDiagram-v2

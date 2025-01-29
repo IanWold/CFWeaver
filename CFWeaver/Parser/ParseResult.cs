@@ -1,4 +1,4 @@
-namespace StateFusion;
+namespace CFWeaver;
 
 public record SuccessResult<T>(T Result);
 

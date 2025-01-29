@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace StateFusion;
+namespace CFWeaver;
 
 public record Step(string Name, IEnumerable<Result> Results)
 {

@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace StateFusion;
+namespace CFWeaver;
 
 file record ResultAccumulator<T>(IEnumerable<T> Successes, IEnumerable<Error> Errors);
 

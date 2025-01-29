@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace StateFusion;
+namespace CFWeaver;
 
 public record Document(IEnumerable<Endpoint> Endpoints)
 {

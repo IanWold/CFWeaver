@@ -1,4 +1,4 @@
-﻿using StateFusion;
+﻿using CFWeaver;
 
 var content = File.ReadAllText(args.FirstOrDefault() ?? "Example.md");
 await Parser.Parse(content).MapAsync(

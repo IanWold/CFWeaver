@@ -1,4 +1,4 @@
-namespace StateFusion;
+namespace CFWeaver;
 
 public record Error(int Code, string Message, Line? Line = null)
 {

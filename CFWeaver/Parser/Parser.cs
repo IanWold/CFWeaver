@@ -1,4 +1,4 @@
-﻿namespace StateFusion;
+﻿namespace CFWeaver;
 
 file record EndpointAst(string Name, IEnumerable<StepAst> Steps);
 

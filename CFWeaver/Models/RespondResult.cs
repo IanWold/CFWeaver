@@ -1,4 +1,4 @@
-namespace StateFusion;
+namespace CFWeaver;
 
 public record RespondResult(string Name, string? Condition, int Response) : Result(Name, Condition)
 {

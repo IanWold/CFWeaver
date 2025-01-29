@@ -1,4 +1,4 @@
-namespace StateFusion;
+namespace CFWeaver;
 
 public abstract record Result(string Name, string? Condition)
 {

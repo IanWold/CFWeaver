@@ -1,4 +1,4 @@
-namespace StateFusion;
+namespace CFWeaver;
 
 public record GotoResult(string Name, string? Condition, Step Goto) : Result(Name, Condition)
 {

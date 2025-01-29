@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace StateFusion;
+namespace CFWeaver;
 
 public record Table(IEnumerable<Table.Row> Rows, IEnumerable<string> Columns)
 {
