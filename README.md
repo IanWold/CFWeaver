@@ -2,21 +2,33 @@
 
 **Note: CFWeaver is in development and probably going to change a lot in its first few weeks!**
 
-CFWeaver is a tool to generate test scenarios for a combinatorial, state-result approach to covering tests. This is a form of combinatorial testing that utilizes state-result modeling.
+CFWeaver is a tool to generate test scenarios to exhaustively cover possible control flow paths through a system. This is a form of combinatorial test generation that utilizes control-flow modeling to understand the relationship between business requirements and control flow states. It is suitable for systems of any level of complexity in control flow, but not suitable for systems that do not map a relationship between control flow states and business requirements. The best candidates are systems which can enumerate business requirements discretely per decision point in the control flow.
+
+I've written abuot the conditions which caused me to hack this together [on an article on my blog](https://ian.wold.guru/Posts/book_club_1-2025.html).
 
 ## More Detailed Explanation
 
-**Combinatorial Testing** is a method of approaching automated testing which relies on using some _model_ of a system to generate _combinations_ of conditions to test. [Pairwise testing](https://en.wikipedia.org/wiki/All-pairs_testing) is the most well-known form of this style of testing, which uses a model of the inputs to a system to generate pair combinations of inputs with which the system can be tested.
+**Model-Based Testing** is an approach to testing which generates tests based on some _model_ of the system. There are [various types of models](https://www.geeksforgeeks.org/model-based-testing-in-software-testing/) of systems from which tests can be generated. Different kinds of systems lend themselves to being more naturally described by different kinds of models, while many systems may not be suitable for modeling.
 
-**State-Based Testing** is not formally defined at a general level, but would encompass various methods of modeling the potential states of a system to discover test paths. [State-transition testing](https://www.geeksforgeeks.org/state-transition-testing/) would be a well-known form of such a category, which generates tests to cover transitions between states in a state machine.
+A system can be said to be "naturally modeled" if A: it is to describe the system using a certain model; B: such a model provides value to stakeholders in understanding the system; and C: this utility is strong enough that we desire to maintain the model throughout the system's lifetime. Naturally modeled systems are the best candidates for model-based testing.
 
-CFWeaver is neither a pairwise nor a state-transition testing tool. However, it does support a **combinatorial** and **state-based** method to generating test scenarios for systems that can be modeled as a **series of decisions**.
+**Combinatorial Testing** is a method of approaching model-based testing using combinatorial techniques; that is, counting and enumerating many possibilities that can be described from a more general model. [Pairwise testing](https://en.wikipedia.org/wiki/All-pairs_testing) is the most well-known form of this style of testing, which uses a model of the inputs to a system to generate pair combinations of inputs with which the system can be tested.
 
-By way of example, let's suppose we have a REST API which exposes a GET endpoint for some `Item` resource. This system can be modeled as a **series of decisions**: it will authorize the request, validate it, get the resource from the database, check that the authorized caller has access to the resource, and ultimately return the resource. Each step in this series could have many potential results; authorization can succeed or fail, as can validation; the database query could yield the resource, not find it, or error; finally, the caller might or might not have access to the resource.
+**Control Flow** is a well-understood programming concept which nonetheless is used in many different ways to understand different aspects of systems. In general, _control flow_ refers to the order and flow of operations through a system, including decision points where the "flow" branches.
 
-One or more **conditions** can cause the various decisions to yield their different potential **results**, and as testers we expect our endpoint to respond in different ways when it encounters these different states. If the request is not valid we want to return 400, if we can't find the resource we want to return 404, and so on.
+In this case where we are specifically concerned with the control flow providing a model of a system for test generation, the _control flow state model_ describes the chain of _steps_ a system executes. Each _step_ may encapsulate any of: an operation; the potential results of that operation; any change in the state of variables dependent on those results; or any branching in the chain.
 
-CFWeaver takes as input a model of this **series of decisions**, the **conditions** which cause them, and the expected **results** of the system when it encounters the various states. From this input, it combinatorially generates all of the potential states the system might encounter, along with the expected results and conditions which cause them.
+---
+
+CFWeaver combines these three concepts. It uses control flow models to combinatorially generate test scenarios which exhaustively cover all possible paths through a system. By linking the results of each step in the control flow to the _conditions_ which cause the result and _dependent variables_ which arise from each result, each test scenario can meaningfully describe the business requiremens it tests.
+
+_Note that CFWeaver does not generate the tests themselves, rather it generates the scenarios for which tests can later be implemented._
+
+By way of example, let's suppose we have a REST API which exposes a GET endpoint for some `Item` resource. The control flow state model will have several steps: it will authorize the request, validate it, get the resource from the database, check that the authorized caller has access to the resource, and ultimately return the resource. Each step in this series could have many potential results; authorization can succeed or fail, as can validation; the database query could yield the resource, not find it, or error; finally, the caller might or might not have access to the resource.
+
+One or more _conditions_ can cause the various decisions to yield their different potential _results_, and as testers we expect our endpoint to respond in different ways when it encounters these different states. If the request is not valid we want to return 400, if we can't find the resource we want to return 404, and so on.
+
+CFWeaver's input model explicitly defines each of the steps in the control flow chain and each of the possible results at each step. For each result, the model includes the condition(s) which cause that result; and either the value returned if that result terminates the operation, or the next step in the chain.
 
 ## How it Works
 
@@ -31,7 +43,7 @@ The model of the system is made in simple (specialized) Markdown:
 * Authorize: Success = 200 | Failure = 401 ? I am not authorized to access the specific item
 ```
 
-CFWeaver then generates the state-result table, as well as a Mermaid diagram showing the decision flow:
+CFWeaver then generates a table showing the exhaustive combinatorial set of paths through the control flow, as well as a Mermaid diagram outlining the steps:
 
 ```mermaid
 stateDiagram-v2
