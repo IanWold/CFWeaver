@@ -13,4 +13,8 @@ public record Document(IEnumerable<Endpoint> Endpoints)
         .AppendDelegate(Endpoints.Select(e => (Action<StringBuilder>)e.AppendHtml))
         .AppendLine("<script>mermaid.initialize({ startOnLoad: true }); mermaid.init();</script></body></html>")
         .ToString();
+
+    public string Markdown() => new StringBuilder()
+        .AppendDelegate(Endpoints.Select(e => (Action<StringBuilder>)e.AppendMarkdown))
+        .ToString();
 }

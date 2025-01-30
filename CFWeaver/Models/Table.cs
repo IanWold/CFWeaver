@@ -16,6 +16,13 @@ public record Table(IEnumerable<Table.Row> Rows, IEnumerable<string> Columns)
             .Append("<td>")
             .AppendJoin(" and ", Conditions)
             .AppendLine("</td>");
+
+        internal void AppendMarkdown(StringBuilder sb) => sb
+            .Append('|')
+            .AppendJoin("|", Cells)
+            .Append('|')
+            .AppendJoin(" and ", Conditions)
+            .AppendLine("|");
     }
 
     internal static Table From(IEnumerable<Result.Row> rows, IEnumerable<string> columns) =>
@@ -39,4 +46,13 @@ public record Table(IEnumerable<Table.Row> Rows, IEnumerable<string> Columns)
         .AppendLine("<th>Conditions</th></tr>")
         .AppendDelegate(Rows.Select(r => (Action<StringBuilder>)r.AppendHtml))
         .AppendLine("</table>");
+
+    internal void AppendMarkdown(StringBuilder sb) => sb
+        .Append('|')
+        .AppendJoin("|", Columns)
+        .AppendLine("|Conditions|")
+        .Append('|')
+        .AppendJoin("|", Columns.Select(_ => "---"))
+        .AppendLine("|---|")
+        .AppendDelegate(Rows.Select(r => (Action<StringBuilder>)r.AppendMarkdown));
 }

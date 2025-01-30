@@ -27,4 +27,13 @@ public record Endpoint(string Name, IEnumerable<Step> Steps)
         .Append("</pre></code></details><details><summary>CSV</summary><pre style=\"max-width:100%;\"><code style=\"max-width:100%;\">")
         .AppendDelegate(ResultTable.AppendCsv)
         .AppendLine("</pre></code></details></main><hr/>");
+
+    internal void AppendMarkdown(StringBuilder sb) => sb
+        .AppendLine($"# {Name}")
+        .AppendLine()
+        .AppendLine("```")
+        .AppendDelegate(AppendMermaid)
+        .AppendLine("```")
+        .AppendLine()
+        .AppendDelegate(ResultTable.AppendMarkdown);
 }
