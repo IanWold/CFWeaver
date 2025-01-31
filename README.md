@@ -1,4 +1,4 @@
-<center><h1>CFWeaver</h1></center>
+<div align="center"><h1>CFWeaver</h1></div>
 
 **Note: CFWeaver is in development and probably going to change a lot in its first few weeks!**
 
