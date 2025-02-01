@@ -6,26 +6,8 @@ on:
       - main
 
 jobs:
-  build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        arch: [x64, arm64]
-        include:
-          - os: ubuntu-latest
-            rid: linux-x64
-          - os: ubuntu-latest
-            rid: linux-arm64
-          - os: windows-latest
-            rid: win-x64
-          - os: windows-latest
-            rid: win-arm64
-          - os: macos-latest
-            rid: osx-x64
-          - os: macos-latest
-            rid: osx-arm64
-
+  build-linux-x64:
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -38,14 +20,126 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore
 
-      - name: Remove previous artifacts
-        run: rm -rf output/${{ matrix.rid }}
-
       - name: Publish AOT
-        run: dotnet publish -c Release -r ${{ matrix.rid }} -o output/${{ matrix.rid }}
+        run: dotnet publish -c Release -r linux-x64 -o output/linux-x64
 
-      - name: Upload Artifacts
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-${{ matrix.rid }}-${{ github.run_id }}
-          path: output/${{ matrix.rid }}
+          name: app-linux-x64-${{ github.run_id }}
+          path: output/linux-x64
+
+  build-linux-arm64:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Publish AOT
+        run: dotnet publish -c Release -r linux-arm64 -o output/linux-arm64
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-linux-arm64-${{ github.run_id }}
+          path: output/linux-arm64
+
+  build-windows-x64:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Publish AOT
+        run: dotnet publish -c Release -r win-x64 -o output/win-x64
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-win-x64-${{ github.run_id }}
+          path: output/win-x64
+
+  build-windows-arm64:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Publish AOT
+        run: dotnet publish -c Release -r win-arm64 -o output/win-arm64
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-win-arm64-${{ github.run_id }}
+          path: output/win-arm64
+
+  build-macos-x64:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Publish AOT
+        run: dotnet publish -c Release -r osx-x64 -o output/osx-x64
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-osx-x64-${{ github.run_id }}
+          path: output/osx-x64
+
+  build-macos-arm64:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Publish AOT
+        run: dotnet publish -c Release -r osx-arm64 -o output/osx-arm64
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-osx-arm64-${{ github.run_id }}
+          path: output/osx-arm64
