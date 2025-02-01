@@ -21,7 +21,7 @@ jobs:
         run: dotnet restore
 
       - name: Publish AOT
-        run: dotnet publish -c Release -r linux-x64 -o output/linux-x64
+        run: dotnet publish CFWeaver/CFWeaver.csproj -c Release -r linux-x64 -o output/linux-x64
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
@@ -44,7 +44,7 @@ jobs:
         run: dotnet restore
 
       - name: Publish AOT
-        run: dotnet publish -c Release -r linux-arm64 -o output/linux-arm64
+        run: dotnet publish CFWeaver/CFWeaver.csproj -c Release -r linux-arm64 -o output/linux-arm64
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
@@ -67,7 +67,7 @@ jobs:
         run: dotnet restore
 
       - name: Publish AOT
-        run: dotnet publish -c Release -r win-x64 -o output/win-x64
+        run: dotnet publish CFWeaver/CFWeaver.csproj -c Release -r win-x64 -o output/win-x64
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
@@ -90,7 +90,7 @@ jobs:
         run: dotnet restore
 
       - name: Publish AOT
-        run: dotnet publish -c Release -r win-arm64 -o output/win-arm64
+        run: dotnet publish CFWeaver/CFWeaver.csproj -c Release -r win-arm64 -o output/win-arm64
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
@@ -113,7 +113,7 @@ jobs:
         run: dotnet restore
 
       - name: Publish AOT
-        run: dotnet publish -c Release -r osx-x64 -o output/osx-x64
+        run: dotnet publish CFWeaver/CFWeaver.csproj -c Release -r osx-x64 -o output/osx-x64
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
@@ -136,7 +136,7 @@ jobs:
         run: dotnet restore
 
       - name: Publish AOT
-        run: dotnet publish -c Release -r osx-arm64 -o output/osx-arm64
+        run: dotnet publish CFWeaver/CFWeaver.csproj -c Release -r osx-arm64 -o output/osx-arm64
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
