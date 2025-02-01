@@ -1,4 +1,4 @@
-name: Build NativeAOT App
+name: Build NativeAOT
 
 on:
   push:
@@ -39,7 +39,7 @@ jobs:
         run: dotnet restore
 
       - name: Publish AOT
-        run: dotnet publish -c Release -r ${{ matrix.rid }} -p:PublishAot=true --self-contained true -o output/${{ matrix.rid }}
+        run: dotnet publish -c Release -r ${{ matrix.rid }} -o output/${{ matrix.rid }}
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
