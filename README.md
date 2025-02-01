@@ -1,4 +1,6 @@
 <div align="center">
+  
+<img src="cf.png" width="64" alt="Logo" />
 
 # CFWeaver
 
