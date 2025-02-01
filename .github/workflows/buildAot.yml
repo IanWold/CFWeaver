@@ -38,6 +38,9 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore
 
+      - name: Remove previous artifacts
+        run: rm -rf output/${{ matrix.rid }}
+
       - name: Publish AOT
         run: dotnet publish -c Release -r ${{ matrix.rid }} -o output/${{ matrix.rid }}
 
