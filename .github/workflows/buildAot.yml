@@ -1,9 +1,8 @@
 name: Build NativeAOT
 
 on:
-  push:
-    branches:
-      - main
+  release:
+    types: [created]  
 
 jobs:
   build-linux-x64:
@@ -175,3 +174,19 @@ jobs:
         with:
           name: app-osx-arm64-${{ github.run_id }}
           path: output/osx-arm64
+
+  release:
+    needs: [build-linux-x64, build-windows-x86, build-windows-x64, build-windows-arm64, build-macos-x64, build-macos-arm64]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+  
+      - name: Upload Binaries to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
