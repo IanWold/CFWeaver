@@ -2,7 +2,10 @@ name: Build NativeAOT
 
 on:
   release:
-    types: [created]  
+    types: [created] 
+     
+permissions:
+  contents: write
 
 jobs:
   build-linux-x64:
