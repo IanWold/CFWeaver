@@ -3,7 +3,7 @@ name: Build NativeAOT
 on:
   release:
     types: [created] 
-     
+
 permissions:
   contents: write
 
@@ -182,14 +182,24 @@ jobs:
     needs: [build-linux-x64, build-windows-x86, build-windows-x64, build-windows-arm64, build-macos-x64, build-macos-arm64]
     runs-on: ubuntu-latest
     steps:
-      - name: Download all artifacts
+      - name: Download Artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
+
+      - name: Zip Artifacts
+        run: |
+          cd artifacts
+          for dir in *; do
+            if [ -d "$dir" ]; then
+            zip -r "${dir}.zip" "$dir"
+            fi
+          done
+          ls -lh
   
-      - name: Upload Binaries to GitHub Release
+      - name: Upload Zips to Release
         uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/**/*
+          files: artifacts/*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
