@@ -1,4 +1,13 @@
-<div align="center"><h1>CFWeaver</h1></div>
+<div align="center">
+
+# CFWeaver
+
+<a href="https://github.com/IanWold/CFWeaver/actions"><img src="https://img.shields.io/github/actions/workflow/status/ianwold/cfweaver/buildAot.yml?style=for-the-badge
+" /></a>
+<a href="https://github.com/IanWold/CFWeaver/releases"><img src="https://img.shields.io/github/v/release/ianwold/cfweaver?include_prereleases&style=for-the-badge
+" /></a>
+
+</div>
 
 **Note: CFWeaver is in development and probably going to change a lot in its first few weeks!**
 
