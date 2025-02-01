@@ -31,9 +31,13 @@ public record Endpoint(string Name, IEnumerable<Step> Steps)
     internal void AppendMarkdown(StringBuilder sb) => sb
         .AppendLine($"# {Name}")
         .AppendLine()
-        .AppendLine("```")
+        .AppendLine("```mermaid")
         .AppendDelegate(AppendMermaid)
         .AppendLine("```")
         .AppendLine()
-        .AppendDelegate(ResultTable.AppendMarkdown);
+        .AppendDelegate(ResultTable.AppendMarkdown)
+        .AppendLine()
+        .AppendLine("```csv")
+        .AppendDelegate(ResultTable.AppendCsv)
+        .AppendLine("```");
 }
