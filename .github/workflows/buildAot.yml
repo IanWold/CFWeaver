@@ -61,6 +61,29 @@ jobs:
 #          name: app-linux-arm64-${{ github.run_id }}
 #          path: output/linux-arm64
 
+  build-windows-x86:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Publish AOT
+        run: dotnet publish CFWeaver/CFWeaver.csproj -c Release -r win-x86 -o output/win-x86
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-win-x86-${{ github.run_id }}
+          path: output/win-x86
+
   build-windows-x64:
     runs-on: windows-latest
     steps:
