@@ -28,7 +28,7 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-linux-x64-${{ github.run_id }}
+          name: cfweaver-linux-x64
           path: output/linux-x64
 
 #  TODO: make this work
@@ -60,7 +60,7 @@ jobs:
 #      - name: Upload Artifact
 #        uses: actions/upload-artifact@v4
 #        with:
-#          name: app-linux-arm64-${{ github.run_id }}
+#          name: cfweaver-linux-arm64
 #          path: output/linux-arm64
 
   build-windows-x86:
@@ -83,7 +83,7 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-win-x86-${{ github.run_id }}
+          name: cfweaver-win-x86
           path: output/win-x86
 
   build-windows-x64:
@@ -106,7 +106,7 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-win-x64-${{ github.run_id }}
+          name: cfweaver-win-x64
           path: output/win-x64
 
   build-windows-arm64:
@@ -129,7 +129,7 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-win-arm64-${{ github.run_id }}
+          name: cfweaver-win-arm64
           path: output/win-arm64
 
   build-macos-x64:
@@ -152,7 +152,7 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-osx-x64-${{ github.run_id }}
+          name: cfweaver-osx-x64
           path: output/osx-x64
 
   build-macos-arm64:
@@ -175,7 +175,7 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-osx-arm64-${{ github.run_id }}
+          name: osx-arm64
           path: output/osx-arm64
 
   release:
