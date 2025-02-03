@@ -41,11 +41,15 @@ CFWeaver's input model explicitly defines each of the steps in the control flow 
 * Authorize: Success = 200 | Failure = 401 ? I am not authorized to access the specific item
 ```
 
+The [control flow state model documentation](https://github.com/IanWold/CFWeaver/wiki/Control-Flow-State-Model) explains the full syntax for the model.
+
 ### 2. Run CFWeaver
 
 ```
 cfweaver input.md -o output.html
 ```
+
+The [CLI reference](https://github.com/IanWold/CFWeaver/wiki/CLI-Reference) documents all of the options and function of the CLI.
 
 ### 3. CFWeaver Generates Scenarios
 
