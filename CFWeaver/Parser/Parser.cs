@@ -1,6 +1,6 @@
 ﻿namespace CFWeaver;
 
-file record EndpointAst(string Name, IEnumerable<StepAst> Steps);
+file record OperationAst(string Name, IEnumerable<StepAst> Steps);
 
 file record StepAst(string Name, IEnumerable<ResultAst> Results);
 
@@ -20,10 +20,10 @@ file record LineError(int Code, string Message)
 
 file static class Errors
 {
-    public static readonly GeneralError InputNoEndpoints = new(1, "Input contains no endpoint definitions.");
+    public static readonly GeneralError InputNoOperations = new(1, "Input contains no operation definitions.");
 
-    public static readonly LineError EndpointNoSteps = new(101, "Endpoint contains no step definitions");
-    public static readonly LineError EndpointNoName = new(102, "Endpoint has no name");
+    public static readonly LineError OperationNoSteps = new(101, "Operation contains no step definitions");
+    public static readonly LineError OperationNoName = new(102, "Operation has no name");
 
     public static readonly LineError StepNoColon = new(201, "Step definitions must include a single `:` separating the step name from the step results");
     public static readonly LineError StepNoName = new(202, "Step has no name");
@@ -38,7 +38,7 @@ public static class Parser
     public static ParseResult<Document> Parse(string source)
     {
         var lines = source.Split('\n');
-        List<List<Line>> linesByEndpoint = [];
+        List<List<Line>> linesByOperation = [];
 
         for (int i = 0; i < lines.Length; i++)
         {
@@ -50,24 +50,24 @@ public static class Parser
             }
             else if (trimmedLine.First() == '#')
             {
-                linesByEndpoint.Add([new(trimmedLine, i)]);
+                linesByOperation.Add([new(trimmedLine, i)]);
             }
             else if (trimmedLine.First() == '*')
             {
-                linesByEndpoint.Last().Add(new(trimmedLine, i));
+                linesByOperation.Last().Add(new(trimmedLine, i));
             }
         }
 
-        if (linesByEndpoint.Count == 0)
+        if (linesByOperation.Count == 0)
         {
-            return Errors.InputNoEndpoints.Result();
+            return Errors.InputNoOperations.Result();
         }
 
-        return linesByEndpoint
-            .Select(ParseEndpoint)
+        return linesByOperation
+            .Select(ParseOperation)
             .Coalesce(e => new Document(e.Select(Raise)));
 
-        static Endpoint Raise(EndpointAst ast)
+        static Operation Raise(OperationAst ast)
         {
             var reversedSteps = ast.Steps.Reverse();
             List<Step> steps = [];
@@ -88,22 +88,22 @@ public static class Parser
             return new(ast.Name, steps);
         }
 
-        static ParseResult<EndpointAst> ParseEndpoint(IEnumerable<Line> lines)
+        static ParseResult<OperationAst> ParseOperation(IEnumerable<Line> lines)
         {
             if (lines.Count() < 2)
             {
-                return Errors.EndpointNoSteps.Result(lines.First());
+                return Errors.OperationNoSteps.Result(lines.First());
             }
 
             var name = lines.First().Text.Split('#').Last().Trim();
             if (string.IsNullOrEmpty(name))
             {
-                return Errors.EndpointNoName.Result(lines.First());
+                return Errors.OperationNoName.Result(lines.First());
             }
 
             return lines.Skip(1)
                 .Select(ParseStep)
-                .Coalesce(steps => new EndpointAst(name, steps));
+                .Coalesce(steps => new OperationAst(name, steps));
         }
 
         static ParseResult<StepAst> ParseStep(Line line)

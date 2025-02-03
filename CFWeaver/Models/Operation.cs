@@ -2,7 +2,7 @@ using System.Text;
 
 namespace CFWeaver;
 
-public record Endpoint(string Name, IEnumerable<Step> Steps)
+public record Operation(string Name, IEnumerable<Step> Steps)
 {
     readonly Table ResultTable =
         Table.From(
