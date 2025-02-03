@@ -9,13 +9,16 @@
 
 Generate **comprehensive** test scenarios from **control flow** models in **simple markdown**
 
+[Documentation](https://github.com/IanWold/CFWeaver/wiki) • 
+[Download](https://github.com/IanWold/CFWeaver/releases)
+
 </div>
 
 ---
 
-**Note: CFWeaver is in development and probably going to change a lot in its first few weeks!**
+CFWeaver is a tool to generate test scenarios to exhaustively cover possible control flow paths through a system. This is a form of combinatorial test generation that utilizes control flow modeling to understand the relationship between business requirements and control flow states.
 
-CFWeaver is a tool to generate test scenarios to exhaustively cover possible control flow paths through a system. This is a form of combinatorial test generation that utilizes control flow modeling to understand the relationship between business requirements and control flow states. It is suitable for systems of any level of complexity in control flow, but not suitable for systems that do not map a relationship between control flow states and business requirements. The best candidates are systems which can enumerate business requirements discretely per decision point in the control flow.
+It is suitable for systems of any level of complexity in control flow, but not suitable for systems that do not map a relationship between control flow states and business requirements. The best candidates are systems which can enumerate business requirements discretely per decision point in the control flow.
 
 I've written about the conditions which caused me to hack this together [on an article on my blog](https://ian.wold.guru/Posts/book_club_1-2025.html).
 
@@ -38,11 +41,15 @@ CFWeaver's input model explicitly defines each of the steps in the control flow 
 * Authorize: Success = 200 | Failure = 401 ? I am not authorized to access the specific item
 ```
 
+The [control flow state model documentation](https://github.com/IanWold/CFWeaver/wiki/Control-Flow-State-Model) explains the full syntax for the model.
+
 ### 2. Run CFWeaver
 
 ```
 cfweaver input.md -o output.html
 ```
+
+The [CLI reference](https://github.com/IanWold/CFWeaver/wiki/CLI-Reference) documents all of the options and function of the CLI.
 
 ### 3. CFWeaver Generates Scenarios
 
