@@ -7,6 +7,10 @@
 <a href="https://github.com/IanWold/CFWeaver/actions"><img src="https://img.shields.io/github/actions/workflow/status/ianwold/cfweaver/buildAot.yml?style=for-the-badge" /></a>
 <a href="https://github.com/IanWold/CFWeaver/releases"><img src="https://img.shields.io/github/v/release/ianwold/cfweaver?include_prereleases&style=for-the-badge" /></a>
 
+
+[Documentation](https://github.com/IanWold/CFWeaver/wiki) • 
+[Download](https://github.com/IanWold/CFWeaver/releases)
+
 Generate **comprehensive** test scenarios from **control flow** models in **simple markdown**
 
 </div>
