@@ -6,33 +6,6 @@ file record StepAst(string Name, IEnumerable<ResultAst> Results);
 
 file record ResultAst(string Name, string? Condition, string? Goto = null, int? Response = null);
 
-file record GeneralError(int Code, string Message)
-{
-    public FailureResult Result() =>
-        new([new(Code, Message)]);
-}
-
-file record LineError(int Code, string Message)
-{
-    public FailureResult Result(Line line) =>
-        new([new(Code, Message, line)]);
-}
-
-file static class Errors
-{
-    public static readonly GeneralError InputNoOperations = new(1, "Input contains no operation definitions.");
-
-    public static readonly LineError OperationNoSteps = new(101, "Operation contains no step definitions");
-    public static readonly LineError OperationNoName = new(102, "Operation has no name");
-
-    public static readonly LineError StepNoColon = new(201, "Step definitions must include a single `:` separating the step name from the step results");
-    public static readonly LineError StepNoName = new(202, "Step has no name");
-    public static readonly LineError StepNameSpaces = new(203, "Step names must not contain spaces");
-
-    public static readonly LineError ResultNoName = new(301, "Result has no name");
-    public static readonly LineError ResultNoReturnOrGoto = new(302, "No return or goto value given for result");
-}
-
 public static class Parser
 {
     public static ParseResult<Document> Parse(string source)
