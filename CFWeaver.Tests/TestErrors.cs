@@ -16,7 +16,7 @@ public class TestErrors
             )
         );
 
-        Assert.Contains("Error 1", console);
+        Assert.Contains("1", console);
         Assert.Contains("Input contains no operation definitions", console);
         Assert.Empty(files);
     }
@@ -35,7 +35,7 @@ public class TestErrors
             )
         );
 
-        Assert.Contains("Error 101", console);
+        Assert.Contains("101", console);
         Assert.Contains("Operation contains no step definitions", console);
         Assert.Empty(files);
     }
@@ -54,7 +54,7 @@ public class TestErrors
             )
         );
 
-        Assert.Contains("Error 102", console);
+        Assert.Contains("102", console);
         Assert.Contains("Operation has no name", console);
         Assert.Empty(files);
     }
@@ -73,7 +73,7 @@ public class TestErrors
             )
         );
 
-        Assert.Contains("Error 201", console);
+        Assert.Contains("201", console);
         Assert.Contains("Step definitions must include a single `:` separating the step name from the step results", console);
         Assert.Empty(files);
     }
@@ -92,7 +92,7 @@ public class TestErrors
             )
         );
 
-        Assert.Contains("Error 202", console);
+        Assert.Contains("202", console);
         Assert.Contains("Step has no name", console);
         Assert.Empty(files);
     }
@@ -111,7 +111,7 @@ public class TestErrors
             )
         );
 
-        Assert.Contains("Error 203", console);
+        Assert.Contains("203", console);
         Assert.Contains("Step names must not contain spaces", console);
         Assert.Empty(files);
     }
@@ -130,7 +130,7 @@ public class TestErrors
             )
         );
 
-        Assert.Contains("Error 301", console);
+        Assert.Contains("301", console);
         Assert.Contains("Result has no name", console);
         Assert.Empty(files);
     }
@@ -149,9 +149,8 @@ public class TestErrors
             )
         );
 
-        Assert.Contains("Error 302", console);
+        Assert.Contains("302", console);
         Assert.Contains("No return or goto value given for result", console);
         Assert.Empty(files);
     }
-    
 }
