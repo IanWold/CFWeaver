@@ -1,12 +1,11 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
-using Files = System.Collections.Generic.Dictionary<string, string>;
 
 namespace CFWeaver.Tests;
 
-file class FakeFileSystem(Files inputFiles) : FileSystem
+file class FakeFileSystem(Dictionary<string, string> inputFiles) : FileSystem
 {
-    public Files OutputFiles { get; init; } = [];
+    public Dictionary<string, string> OutputFiles { get; init; } = [];
 
     public override bool TryReadAllText(string path, [NotNullWhen(true)] out string? content) =>
         inputFiles.TryGetValue(path, out content);
@@ -22,12 +21,12 @@ file class FakeFileSystem(Files inputFiles) : FileSystem
 
 public static class Runner
 {
-    public static async Task<(string console, Files files)> RunTestAsync(string[] args, Files inputFiles)
+    public static async Task<(string console, Dictionary<string, string> files)> RunTestAsync(string args, params IEnumerable<(string path, string content)> inputFiles)
     {
         var sb = new StringBuilder();
-        var files = new FakeFileSystem(inputFiles);
+        var files = new FakeFileSystem(inputFiles.ToDictionary(f => f.path, f => f.content));
 
-        await new App(args, new StringWriter(sb), files).RunAsync();
+        await new App(args.Split(' '), new StringWriter(sb), files).RunAsync();
 
         return (sb.ToString(), files.OutputFiles);
     }
