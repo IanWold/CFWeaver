@@ -26,4 +26,5 @@ static class Errors
 
     internal static readonly LineError ResultNoName = new(301, "Result has no name");
     internal static readonly LineError ResultNoReturnOrGoto = new(302, "No return or goto value given for result");
+    internal static readonly LineError ResultDuplicateVariables = new(303, "Result must not contain variables with duplicate names.");
 }

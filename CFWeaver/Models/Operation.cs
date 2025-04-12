@@ -7,7 +7,7 @@ public record Operation(string Name, IEnumerable<Step> Steps)
     readonly Table ResultTable =
         Table.From(
             Steps.First().ResultTable,
-            [..Steps.Select(s => s.Name), "Respond"]
+            [..Steps.Select(s => s.Name), "Respond", ..Steps.SelectMany(s => s.VariableNames).Distinct()]
         );
 
     internal void AppendMermaid(StringBuilder sb) => sb

@@ -10,6 +10,9 @@ public record Step(string Name, IEnumerable<Result> Results)
         ..Results.OfType<RespondResult>().SelectMany(r => r.ResultsTable(Name)),
     ];
 
+    internal readonly IEnumerable<string> VariableNames =
+        ["Condition", ..Results.SelectMany(r => r.Variables.Keys).Distinct().Except(["Condition"])];
+
     internal void AppendMermaid(StringBuilder sb)
     {
         if (Results.OfType<GotoResult>() is IEnumerable<GotoResult> gotoResults && gotoResults.Any())

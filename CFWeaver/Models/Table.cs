@@ -4,7 +4,7 @@ namespace CFWeaver;
 
 public record Table(IEnumerable<Table.Row> Rows, IEnumerable<string> Columns)
 {
-    public record Row(IEnumerable<string> Cells, IEnumerable<string> Conditions)
+    public record Row(IEnumerable<string> Cells)
     {
         internal void AppendCsv(StringBuilder sb) => sb
             .AppendLine()
@@ -13,15 +13,11 @@ public record Table(IEnumerable<Table.Row> Rows, IEnumerable<string> Columns)
         internal void AppendHtml(StringBuilder sb) => sb
             .AppendLine("<tr>")
             .AppendJoin("", Cells.Select(c => $"<td>{c}</td>"))
-            .Append("<td>")
-            .AppendJoin(" and ", Conditions)
-            .AppendLine("</td>");
+            .AppendLine("</tr>");
 
         internal void AppendMarkdown(StringBuilder sb) => sb
             .Append('|')
             .AppendJoin("|", Cells)
-            .Append('|')
-            .AppendJoin(" and ", Conditions)
             .AppendLine("|");
     }
 
@@ -29,8 +25,14 @@ public record Table(IEnumerable<Table.Row> Rows, IEnumerable<string> Columns)
         new(
             rows.Select(row =>
                 new Row(
-                    columns.Select(col => row.Cells.FirstOrDefault(c => c.Column == col)?.Value ?? string.Empty),
-                    row.Conditions
+                    columns.Select(col =>
+                        row.Cells.FirstOrDefault(c => c.Column == col)?.Value
+                        ?? (
+                            row.Variables.TryGetValue(col, out var variable)
+                            ? variable
+                            : string.Empty
+                        )
+                    )
                 )
             ),
             columns
@@ -43,14 +45,13 @@ public record Table(IEnumerable<Table.Row> Rows, IEnumerable<string> Columns)
     internal void AppendHtml(StringBuilder sb) => sb
         .AppendLine("<table><tr>")
         .AppendJoin("", Columns.Select(c => $"<th>{c}</th>"))
-        .AppendLine("<th>Conditions</th></tr>")
+        .AppendLine("</tr>")
         .AppendDelegate(Rows.Select(r => (Action<StringBuilder>)r.AppendHtml))
         .AppendLine("</table>");
 
     internal void AppendMarkdown(StringBuilder sb) => sb
         .Append('|')
         .AppendJoin("|", Columns)
-        .AppendLine("|Conditions|")
         .Append('|')
         .AppendJoin("|", Columns.Select(_ => "---"))
         .AppendLine("|---|")

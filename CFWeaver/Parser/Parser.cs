@@ -4,7 +4,9 @@ file record OperationAst(string Name, IEnumerable<StepAst> Steps);
 
 file record StepAst(string Name, IEnumerable<ResultAst> Results);
 
-file record ResultAst(string Name, string? Condition, string? Goto = null, int? Response = null);
+file record ResultAst(string Name, IEnumerable<VariableAst> Variables, string? Goto = null, int? Response = null);
+
+file record VariableAst(string Name, string Value);
 
 public static class Parser
 {
@@ -25,7 +27,7 @@ public static class Parser
             {
                 linesByOperation.Add([new(trimmedLine, i)]);
             }
-            else if (trimmedLine.First() == '*')
+            else if (trimmedLine.First() == '*'|| trimmedLine.First() == '-')
             {
                 linesByOperation.Last().Add(new(trimmedLine, i));
             }
@@ -51,8 +53,8 @@ public static class Parser
                     astStep.Name,
                     [..astStep.Results.Select(r =>
                         r.Response is int response
-                        ? (Result)new RespondResult(r.Name, r.Condition, response)
-                        : new GotoResult(r.Name, r.Condition, steps.Single(s => s.Name == (r.Goto ?? steps.Last().Name)))
+                        ? (Result)new RespondResult(r.Name, r.Variables.ToDictionary(v => v.Name, v => v.Value), response)
+                        : new GotoResult(r.Name, r.Variables.ToDictionary(v => v.Name, v => v.Value), steps.Single(s => s.Name == (r.Goto ?? steps.Last().Name)))
                     )]
                 ));
             }
@@ -73,22 +75,53 @@ public static class Parser
             {
                 return Errors.OperationNoName.Result(lines.First());
             }
+            
+            var stepLines = lines.Skip(1);
+            List<List<Line>> linesByOperation = [];
 
-            return lines.Skip(1)
-                .Select(ParseStep)
+            foreach (var stepLine in stepLines)
+            {
+                if (stepLine.Text.First() == '*')
+                {
+                    linesByOperation.Add([stepLine]);
+                }
+                else if (stepLine.Text.First() == '-')
+                {
+                    linesByOperation.Last().Add(stepLine);
+                }
+            }
+
+            return linesByOperation
+                .Select(l => ParseStep(l.First(), l.Skip(1)))
                 .Coalesce(steps => new OperationAst(name, steps));
         }
+        
+        static ParseResult<StepAst> ParseStep(Line headerLine, IEnumerable<Line> resultLines)
+        {
+            var result = ParseStepHeader(headerLine);
+            return result.Map(
+                success: step =>
+                    !resultLines.Any()
+                    ? step
+                    : resultLines
+                        .Select(l => ParseResult(l with { Text = l.Text.Replace("-", "").Trim() }))
+                        .Coalesce(results => step with { Results = [..step.Results, ..results]}),
+                failure: _ => result
+            );
+        }
 
-        static ParseResult<StepAst> ParseStep(Line line)
+        static ParseResult<StepAst> ParseStepHeader(Line line)
         {
             var split = line.Text.Split(':');
-            if (split.Length != 2)
+
+            var name = split.First().Replace("*", "").Trim();
+            var isOnlyName = split.Length == 1;
+
+            if (isOnlyName && name.Contains(' '))
             {
                 return Errors.StepNoColon.Result(line);
             }
-
-            var name = split.First().Replace("*", "").Trim();
-            if (string.IsNullOrEmpty(name))
+            else if (string.IsNullOrEmpty(name))
             {
                 return Errors.StepNoName.Result(line);
             }
@@ -97,17 +130,37 @@ public static class Parser
                 return Errors.StepNameSpaces.Result(line);
             }
 
-            return split.Last().Split('|')
-                .Select(l => ParseResult(new Line(l.Trim(), line.Number)))
-                .Coalesce(results => new StepAst(name, results));
+            return isOnlyName
+                ? new StepAst(name, [])
+                : split.Last().Split('|')
+                    .Select(l => ParseResult(new Line(l.Trim(), line.Number)))
+                    .Coalesce(results => new StepAst(name, results));
         }
-
+        
         static ParseResult<ResultAst> ParseResult(Line line)
         {
-            var conditionSplit = line.Text.Split("?");
+            var variablesSplit = line.Text.Split("?");
 
-            var split = conditionSplit.First().Split('=');
-            var condition = conditionSplit.Length > 1 ? conditionSplit.Last().Trim() : null;
+            var split = variablesSplit.First().Split('=');
+            var variablesText = variablesSplit.Length > 1 ? variablesSplit.Last().Trim().Split('&') : [];
+            var variables = variablesText.Select(v => {
+                var assignmentSplit = v.Trim().Split("=");
+                return assignmentSplit.Length > 1
+                    ? new VariableAst(
+                        Name: assignmentSplit.First(),
+                        Value: assignmentSplit.Last()
+                    )
+                    : new VariableAst(
+                        Name: "Condition",
+                        Value: assignmentSplit.First()
+                    );
+            });
+
+            var duplicateVariableNames = variables.GroupBy(v => v.Name).Where(g => g.Count() > 1).Select(g => g.Key);
+            if (duplicateVariableNames.Any())
+            {
+                return Errors.ResultDuplicateVariables.Result(line);
+            }
 
             var name = split.First().Trim();
             if (string.IsNullOrEmpty(name))
@@ -117,7 +170,7 @@ public static class Parser
 
             if (split.Length == 1)
             {
-                return new ResultAst(name, condition);
+                return new ResultAst(name, variables);
             }
             else if (split.Last().Trim() is not string last || string.IsNullOrEmpty(last))
             {
@@ -125,11 +178,11 @@ public static class Parser
             }
             else if (int.TryParse(last, out var response))
             {
-                return new ResultAst(name, condition, Response: response);
+                return new ResultAst(name, variables, Response: response);
             }
             else
             {
-                return new ResultAst(name, condition, Goto: last);
+                return new ResultAst(name, variables, Goto: last);
             }
         }
     }
