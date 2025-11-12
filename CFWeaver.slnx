@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="CFWeaver.Tests/CFWeaver.Tests.csproj" />
+  <Project Path="CFWeaver/CFWeaver.csproj" />
+</Solution>
