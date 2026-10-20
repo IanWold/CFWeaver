@@ -151,4 +151,87 @@ public class TestGeneration
             ignoreLineEndingDifferences: true
         );
     }
+
+    [Fact]
+    public async Task KeepsHyphensInListedResults()
+    {
+        var (_, files) = await RunTestAsync("input.md -o output.md -f md",
+            (
+                "input.md",
+                """
+                # Operation 1
+
+                * First
+                    - Valid ? the request is well-formed
+                    - Invalid = 400 ? the request is ill-formed
+                * Second: Done = 200
+                """
+            )
+        );
+
+        Assert.Equal(
+            """
+            |First|Second|Respond|Condition|
+            |---|---|---|---|
+            |Valid|Done|200|the request is well-formed|
+            |Invalid||400|the request is ill-formed|
+            """,
+            ExtractTable(files),
+            ignoreLineEndingDifferences: true
+        );
+    }
+
+    [Fact]
+    public async Task TrimsVariableNamesAndValues()
+    {
+        var (_, files) = await RunTestAsync("input.md -o output.md -f md",
+            (
+                "input.md",
+                """
+                # Operation 1
+
+                * First: Success ? DidError = no | Failure = 500 ? DidError=yes
+                * Second: Done = 200
+                """
+            )
+        );
+
+        Assert.Equal(
+            """
+            |First|Second|Respond|Condition|DidError|
+            |---|---|---|---|---|
+            |Success|Done|200||no|
+            |Failure||500||yes|
+            """,
+            ExtractTable(files),
+            ignoreLineEndingDifferences: true
+        );
+    }
+
+    [Fact]
+    public async Task KeepsDelimitersInConditionsAndValues()
+    {
+        var (_, files) = await RunTestAsync("input.md -o output.md -f md",
+            (
+                "input.md",
+                """
+                # Operation 1
+
+                * First: Late = 409 ? the time is after 10:30 & Query = page=2 | OnTime ? is the store open? yes
+                * Second: Done = 200
+                """
+            )
+        );
+
+        Assert.Equal(
+            """
+            |First|Second|Respond|Condition|Query|
+            |---|---|---|---|---|
+            |OnTime|Done|200|is the store open? yes||
+            |Late||409|the time is after 10:30|page=2|
+            """,
+            ExtractTable(files),
+            ignoreLineEndingDifferences: true
+        );
+    }
 }

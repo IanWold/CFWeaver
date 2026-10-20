@@ -140,7 +140,7 @@ public static class Parser
                     !resultLines.Any()
                     ? step
                     : resultLines
-                        .Select(l => ParseResult(l with { Text = l.Text.Replace("-", "").Trim() }))
+                        .Select(l => ParseResult(l with { Text = l.Text[1..].Trim() }))
                         .Coalesce(results => step with { Results = [..step.Results, ..results]}),
                 failure: _ => result
             );
@@ -148,7 +148,7 @@ public static class Parser
 
         static ParseResult<StepAst> ParseStepHeader(Line line)
         {
-            var split = line.Text.Split(':');
+            var split = line.Text.Split(':', 2);
 
             var name = split.First().Replace("*", "").Trim();
             var isOnlyName = split.Length == 1;
@@ -175,12 +175,12 @@ public static class Parser
         
         static ParseResult<ResultAst> ParseResult(Line line)
         {
-            var variablesSplit = line.Text.Split("?");
+            var variablesSplit = line.Text.Split('?', 2);
 
             var split = variablesSplit.First().Split('=');
             var variablesText = variablesSplit.Length > 1 ? variablesSplit.Last().Trim().Split('&') : [];
             var variables = variablesText.Select(v => {
-                var assignmentSplit = v.Trim().Split("=");
+                var assignmentSplit = v.Split('=', 2, StringSplitOptions.TrimEntries);
                 return assignmentSplit.Length > 1
                     ? new VariableAst(
                         Name: assignmentSplit.First(),
