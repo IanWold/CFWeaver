@@ -20,15 +20,23 @@ public class App(string[] args, TextWriter textWriter, TextWriter errorWriter, F
         /// Generates test scenarios from a control flow state diagram.
         /// </summary>
         /// <param name="input">The path to the Markdown model file (see Model syntax below).</param>
-        /// <param name="output">-o, The path to the output file, or - to write to stdout.</param>
+        /// <param name="output">-o, The path to the output file, or - to write to stdout. Required unless --check is given.</param>
         /// <param name="format">-f, The format to output. [html|md|json]</param>
+        /// <param name="check">Only validate the model: report errors and warnings without writing any output.</param>
         [Command("")]
         public async Task<int> Compile(
             [Argument] string input,
-            string output,
-            Format format = Format.Html
+            string? output = null,
+            Format format = Format.Html,
+            bool check = false
         )
         {
+            if (!check && output is null)
+            {
+                terminal.Error.WriteLine(Errors.OutputNotSpecified.Result().Errors.PrettyPrint());
+                return 1;
+            }
+
             if (!fileSystem.TryReadAllText(input, out var content))
             {
                 terminal.Error.WriteLine(Errors.FileDoesNotExist.Result().Errors.PrettyPrint());
@@ -36,7 +44,7 @@ public class App(string[] args, TextWriter textWriter, TextWriter errorWriter, F
             }
 
             var toStandardOut = output == "-";
-            var log = toStandardOut ? TextWriter.Null : terminal.Out;
+            var log = check || toStandardOut ? TextWriter.Null : terminal.Out;
 
             log.WriteLine($"Successfully read {input}.");
             log.WriteLine($"Beginning parse...");
@@ -49,6 +57,14 @@ public class App(string[] args, TextWriter textWriter, TextWriter errorWriter, F
                     foreach (var warning in document.Warnings)
                     {
                         terminal.Error.WriteLine(warning);
+                    }
+
+                    if (check)
+                    {
+                        var operations = document.Operations.Count();
+                        var scenarios = document.Operations.Sum(o => o.Scenarios.Count);
+                        terminal.Out.WriteLine($"Model is valid: {operations} operation{(operations == 1 ? "" : "s")}, {scenarios} scenario{(scenarios == 1 ? "" : "s")}.");
+                        return 0;
                     }
 
                     var rendered = format switch {
@@ -64,7 +80,7 @@ public class App(string[] args, TextWriter textWriter, TextWriter errorWriter, F
                     }
 
                     log.WriteLine($"Writing to {output}...");
-                    if (fileSystem.GetDirectoryName(output) is string outputDirectory
+                    if (fileSystem.GetDirectoryName(output!) is string outputDirectory
                         && !string.IsNullOrWhiteSpace(outputDirectory)
                         && !fileSystem.DirectoryExists(outputDirectory)
                     )
@@ -72,7 +88,7 @@ public class App(string[] args, TextWriter textWriter, TextWriter errorWriter, F
                         fileSystem.CreateDirectory(outputDirectory);
                     }
 
-                    await fileSystem.WriteAllTextAsync(output, rendered);
+                    await fileSystem.WriteAllTextAsync(output!, rendered);
 
                     log.WriteLine($"Finished.");
                     return 0;

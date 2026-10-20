@@ -281,6 +281,25 @@ public class TestErrors
     }
 
     [Fact]
+    public async Task OutputNotSpecified()
+    {
+        var result = await RunTestAsync("input.md",
+            (
+                "input.md",
+                """
+                # Operation 1
+
+                * Step: Success = 200
+                """
+            )
+        );
+
+        Assert.Contains("Error 3: No output path given", result.Error);
+        Assert.Equal(1, result.ExitCode);
+        Assert.Empty(result.Files);
+    }
+
+    [Fact]
     public async Task StepOutsideOperation()
     {
         var (console, files) = await RunTestAsync("input.md -o output.html",

@@ -138,4 +138,65 @@ public class TestOutput
         Assert.Equal(0, result.ExitCode);
         Assert.Contains("output.md", result.Files.Keys);
     }
+
+    [Fact]
+    public async Task CheckSummarizesValidModelWithoutWritingOutput()
+    {
+        var result = await RunTestAsync("input.md --check",
+            (
+                "input.md",
+                """
+                # Operation 1
+
+                * First: Done = 200 | Skip = Third
+                * Second: Done = 201
+                * Third: Done = 202 | Failure = 500
+                """
+            )
+        );
+
+        Assert.Equal("Model is valid: 1 operation, 3 scenarios.", result.Output.Trim());
+        Assert.Contains("Warning (line 4 \"* Second: Done = 201\"): No path reaches this step.", result.Error);
+        Assert.Equal(0, result.ExitCode);
+        Assert.Empty(result.Files);
+    }
+
+    [Fact]
+    public async Task CheckReportsErrors()
+    {
+        var result = await RunTestAsync("input.md --check",
+            (
+                "input.md",
+                """
+                # Operation 1
+
+                * Step: Success = Missing | Failure = 400
+                """
+            )
+        );
+
+        Assert.Contains("Error 304", result.Error);
+        Assert.Empty(result.Output);
+        Assert.Equal(1, result.ExitCode);
+        Assert.Empty(result.Files);
+    }
+
+    [Fact]
+    public async Task CheckWritesNoOutputEvenWithOutputPath()
+    {
+        var result = await RunTestAsync("input.md -o output.md --check",
+            (
+                "input.md",
+                """
+                # Operation 1
+
+                * Step: Success = 200 | Failure = 400
+                """
+            )
+        );
+
+        Assert.Equal("Model is valid: 1 operation, 2 scenarios.", result.Output.Trim());
+        Assert.Equal(0, result.ExitCode);
+        Assert.Empty(result.Files);
+    }
 }
