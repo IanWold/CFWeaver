@@ -25,11 +25,11 @@ public static class Parser
             }
             else if (trimmedLine.First() == '#')
             {
-                linesByOperation.Add([new(trimmedLine, i)]);
+                linesByOperation.Add([new(trimmedLine, i + 1)]);
             }
-            else if (trimmedLine.First() == '*'|| trimmedLine.First() == '-')
+            else if (trimmedLine.First() == '*' || trimmedLine.First() == '-' && linesByOperation.Count > 0)
             {
-                linesByOperation.Last().Add(new(trimmedLine, i));
+                linesByOperation.Last().Add(new(trimmedLine, i + 1));
             }
         }
 
@@ -121,7 +121,7 @@ public static class Parser
                 {
                     linesByOperation.Add([stepLine]);
                 }
-                else if (stepLine.Text.First() == '-')
+                else if (stepLine.Text.First() == '-' && linesByOperation.Count > 0)
                 {
                     linesByOperation.Last().Add(stepLine);
                 }

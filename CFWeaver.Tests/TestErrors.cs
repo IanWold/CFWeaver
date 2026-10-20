@@ -251,4 +251,22 @@ public class TestErrors
         Assert.Contains("Result on the final step must have a return value", console);
         Assert.Empty(files);
     }
+
+    [Fact]
+    public async Task ErrorsReportOneBasedLineNumbers()
+    {
+        var (console, files) = await RunTestAsync("input.md -o output.html",
+            (
+                "input.md",
+                """
+                # Operation 1
+
+                * Step: Success = Missing | Failure = 400
+                """
+            )
+        );
+
+        Assert.Contains("(line 3 ", console);
+        Assert.Empty(files);
+    }
 }

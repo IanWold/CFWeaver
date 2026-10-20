@@ -153,6 +153,40 @@ public class TestGeneration
     }
 
     [Fact]
+    public async Task IgnoresCommentListsOutsideSteps()
+    {
+        var (_, files) = await RunTestAsync("input.md -o output.md -f md",
+            (
+                "input.md",
+                """
+                - This file contains the control flow models for the Items operations.
+
+                # Get Item
+
+                This endpoint is located at `/items/{itemId}`.
+
+                - `itemId`: int > 0
+
+                * Authenticate: Success | Failure = 403
+                * GetFromDatabase: Found = 200 | NotFound = 404
+                """
+            )
+        );
+
+        Assert.Equal(
+            """
+            |Authenticate|GetFromDatabase|Respond|Condition|
+            |---|---|---|---|
+            |Success|Found|200||
+            |Success|NotFound|404||
+            |Failure||403||
+            """,
+            ExtractTable(files),
+            ignoreLineEndingDifferences: true
+        );
+    }
+
+    [Fact]
     public async Task KeepsHyphensInListedResults()
     {
         var (_, files) = await RunTestAsync("input.md -o output.md -f md",
