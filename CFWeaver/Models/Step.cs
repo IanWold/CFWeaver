@@ -2,7 +2,7 @@ using System.Text;
 
 namespace CFWeaver;
 
-public record Step(string Name, IEnumerable<Result> Results)
+public record Step(string Name, IEnumerable<Result> Results, Line Line)
 {
     internal void AppendMermaid(StringBuilder sb)
     {

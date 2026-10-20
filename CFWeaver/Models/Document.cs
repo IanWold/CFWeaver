@@ -1,4 +1,6 @@
 using System.Text;
+using System.Text.Encodings.Web;
+using System.Text.Json;
 
 namespace CFWeaver;
 
@@ -17,4 +19,25 @@ public record Document(IEnumerable<Operation> Operations)
     public string Markdown() => new StringBuilder()
         .AppendDelegate(Operations.Select(o => (Action<StringBuilder>)o.AppendMarkdown))
         .ToString();
+
+    public string Json()
+    {
+        using var stream = new MemoryStream();
+        using (var writer = new Utf8JsonWriter(stream, new() { Indented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping }))
+        {
+            writer.WriteStartObject();
+            writer.WriteStartArray("operations");
+            foreach (var operation in Operations)
+            {
+                operation.WriteJson(writer);
+            }
+            writer.WriteEndArray();
+            writer.WriteEndObject();
+        }
+
+        return Encoding.UTF8.GetString(stream.ToArray());
+    }
+
+    internal IEnumerable<Warning> Warnings =>
+        Operations.SelectMany(o => o.Warnings);
 }

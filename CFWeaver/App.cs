@@ -12,15 +12,16 @@ public class App(string[] args, TextWriter textWriter, TextWriter errorWriter, F
         public enum Format
         {
             Html,
-            Md
+            Md,
+            Json
         }
 
         /// <summary>
         /// Generates test scenarios from a control flow state diagram.
         /// </summary>
         /// <param name="input">The path to the Markdown model file (see Model syntax below).</param>
-        /// <param name="output">-o, The path to the output file.</param>
-        /// <param name="format">-f, The format to output. [html|md]</param>
+        /// <param name="output">-o, The path to the output file, or - to write to stdout.</param>
+        /// <param name="format">-f, The format to output. [html|md|json]</param>
         [Command("")]
         public async Task<int> Compile(
             [Argument] string input,
@@ -34,14 +35,35 @@ public class App(string[] args, TextWriter textWriter, TextWriter errorWriter, F
                 return 1;
             }
 
-            terminal.Out.WriteLine($"Successfully read {input}.");
-            terminal.Out.WriteLine($"Beginning parse...");
+            var toStandardOut = output == "-";
+            var log = toStandardOut ? TextWriter.Null : terminal.Out;
+
+            log.WriteLine($"Successfully read {input}.");
+            log.WriteLine($"Beginning parse...");
 
             return await Parser.Parse(content).Map(
                 success: async document =>
                 {
-                    terminal.Out.WriteLine($"Successfully parsed.");
-                    terminal.Out.WriteLine($"Writing to {output}...");
+                    log.WriteLine($"Successfully parsed.");
+
+                    foreach (var warning in document.Warnings)
+                    {
+                        terminal.Error.WriteLine(warning);
+                    }
+
+                    var rendered = format switch {
+                        Format.Md => document.Markdown(),
+                        Format.Json => document.Json(),
+                        Format.Html or _ => document.Html()
+                    };
+
+                    if (toStandardOut)
+                    {
+                        terminal.Out.WriteLine(rendered);
+                        return 0;
+                    }
+
+                    log.WriteLine($"Writing to {output}...");
                     if (fileSystem.GetDirectoryName(output) is string outputDirectory
                         && !string.IsNullOrWhiteSpace(outputDirectory)
                         && !fileSystem.DirectoryExists(outputDirectory)
@@ -50,12 +72,9 @@ public class App(string[] args, TextWriter textWriter, TextWriter errorWriter, F
                         fileSystem.CreateDirectory(outputDirectory);
                     }
 
-                    await fileSystem.WriteAllTextAsync(output, format switch {
-                        Format.Md => document.Markdown(),
-                        Format.Html or _ => document.Html()
-                    });
+                    await fileSystem.WriteAllTextAsync(output, rendered);
 
-                    terminal.Out.WriteLine($"Finished.");
+                    log.WriteLine($"Finished.");
                     return 0;
                 },
                 failure: errors =>

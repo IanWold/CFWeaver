@@ -70,7 +70,7 @@ public static class Parser
 
                 return step.Results
                     .Select(r => ResolveResult(r, index))
-                    .Coalesce(results => new Step(step.Name, results));
+                    .Coalesce(results => new Step(step.Name, results, step.Line));
             }
 
             ParseResult<Result> ResolveResult(ResultAst result, int index)
