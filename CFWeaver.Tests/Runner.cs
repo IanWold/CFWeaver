@@ -1,6 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
 
+[assembly: CollectionBehavior(DisableTestParallelization = true)]
+
 namespace CFWeaver.Tests;
 
 file class FakeFileSystem(Dictionary<string, string> inputFiles) : FileSystem

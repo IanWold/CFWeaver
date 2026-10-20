@@ -153,4 +153,102 @@ public class TestErrors
         Assert.Contains("No return or goto value given for result", console);
         Assert.Empty(files);
     }
+
+    [Fact]
+    public async Task StepNamesMustBeUnique()
+    {
+        var (console, files) = await RunTestAsync("input.md -o output.html",
+            (
+                "input.md",
+                """
+                # Operation 1
+
+                * Step: Success | Failure = 400
+                * Step: Success = 200
+                """
+            )
+        );
+
+        Assert.Contains("204", console);
+        Assert.Contains("Step names must be unique within an operation", console);
+        Assert.Empty(files);
+    }
+
+    [Fact]
+    public async Task StepHasNoResults()
+    {
+        var (console, files) = await RunTestAsync("input.md -o output.html",
+            (
+                "input.md",
+                """
+                # Operation 1
+
+                * First: Success
+                * Second
+                """
+            )
+        );
+
+        Assert.Contains("205", console);
+        Assert.Contains("Step has no results", console);
+        Assert.Empty(files);
+    }
+
+    [Fact]
+    public async Task ResultGoesToUnknownStep()
+    {
+        var (console, files) = await RunTestAsync("input.md -o output.html",
+            (
+                "input.md",
+                """
+                # Operation 1
+
+                * Step: Success = Missing | Failure = 400
+                """
+            )
+        );
+
+        Assert.Contains("304", console);
+        Assert.Contains("Result goes to a step that does not exist", console);
+        Assert.Empty(files);
+    }
+
+    [Fact]
+    public async Task ResultGoesToEarlierStep()
+    {
+        var (console, files) = await RunTestAsync("input.md -o output.html",
+            (
+                "input.md",
+                """
+                # Operation 1
+
+                * First: Success | Failure = 400
+                * Second: Retry = First | Success = 200
+                """
+            )
+        );
+
+        Assert.Contains("305", console);
+        Assert.Contains("Result must go to a later step", console);
+        Assert.Empty(files);
+    }
+
+    [Fact]
+    public async Task ResultOnFinalStepHasNoReturn()
+    {
+        var (console, files) = await RunTestAsync("input.md -o output.html",
+            (
+                "input.md",
+                """
+                # Operation 1
+
+                * Step: Success | Failure = 400
+                """
+            )
+        );
+
+        Assert.Contains("306", console);
+        Assert.Contains("Result on the final step must have a return value", console);
+        Assert.Empty(files);
+    }
 }

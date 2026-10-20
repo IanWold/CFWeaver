@@ -2,9 +2,9 @@
 
 file record OperationAst(string Name, IEnumerable<StepAst> Steps);
 
-file record StepAst(string Name, IEnumerable<ResultAst> Results);
+file record StepAst(string Name, IEnumerable<ResultAst> Results, Line Line);
 
-file record ResultAst(string Name, IEnumerable<VariableAst> Variables, string? Goto = null, int? Response = null);
+file record ResultAst(string Name, IEnumerable<VariableAst> Variables, Line Line, string? Goto = null, int? Response = null);
 
 file record VariableAst(string Name, string Value);
 
@@ -39,28 +39,64 @@ public static class Parser
         }
 
         return linesByOperation
-            .Select(ParseOperation)
-            .Coalesce(e => new Document(e.Select(Raise)));
+            .Select(lines => ParseOperation(lines).Map(
+                success: Resolve,
+                failure: errors => new FailureResult(errors)
+            ))
+            .Coalesce(operations => new Document(operations));
 
-        static Operation Raise(OperationAst ast)
+        static ParseResult<Operation> Resolve(OperationAst ast)
         {
-            var reversedSteps = ast.Steps.Reverse();
-            List<Step> steps = [];
+            var steps = ast.Steps.ToList();
 
-            foreach (var astStep in reversedSteps)
+            return steps
+                .Select(ResolveStep)
+                .Coalesce(resolved => new Operation(ast.Name, resolved));
+
+            ParseResult<Step> ResolveStep(StepAst step, int index)
             {
-                steps.Add(new(
-                    astStep.Name,
-                    [..astStep.Results.Select(r =>
-                        r.Response is int response
-                        ? (Result)new RespondResult(r.Name, r.Variables.ToDictionary(v => v.Name, v => v.Value), response)
-                        : new GotoResult(r.Name, r.Variables.ToDictionary(v => v.Name, v => v.Value), steps.Single(s => s.Name == (r.Goto ?? steps.Last().Name)))
-                    )]
-                ));
+                if (steps.FindIndex(s => s.Name == step.Name) != index)
+                {
+                    return Errors.StepDuplicateName.Result(step.Line);
+                }
+                else if (!step.Results.Any())
+                {
+                    return Errors.StepNoResults.Result(step.Line);
+                }
+
+                return step.Results
+                    .Select(r => ResolveResult(r, index))
+                    .Coalesce(results => new Step(step.Name, results));
             }
 
-            steps.Reverse();
-            return new(ast.Name, steps);
+            ParseResult<Result> ResolveResult(ResultAst result, int index)
+            {
+                var variables = result.Variables.ToDictionary(v => v.Name, v => v.Value);
+
+                if (result.Response is int response)
+                {
+                    return new RespondResult(result.Name, variables, response);
+                }
+
+                var target = result.Goto is string name
+                    ? steps.FindIndex(s => s.Name == name)
+                    : index + 1;
+
+                if (target == -1)
+                {
+                    return Errors.ResultGotoUnknownStep.Result(result.Line);
+                }
+                else if (target <= index)
+                {
+                    return Errors.ResultGotoEarlierStep.Result(result.Line);
+                }
+                else if (target == steps.Count)
+                {
+                    return Errors.ResultFinalStepNoReturn.Result(result.Line);
+                }
+
+                return new GotoResult(result.Name, variables, steps[target].Name);
+            }
         }
 
         static ParseResult<OperationAst> ParseOperation(IEnumerable<Line> lines)
@@ -131,10 +167,10 @@ public static class Parser
             }
 
             return isOnlyName
-                ? new StepAst(name, [])
+                ? new StepAst(name, [], line)
                 : split.Last().Split('|')
                     .Select(l => ParseResult(new Line(l.Trim(), line.Number)))
-                    .Coalesce(results => new StepAst(name, results));
+                    .Coalesce(results => new StepAst(name, results, line));
         }
         
         static ParseResult<ResultAst> ParseResult(Line line)
@@ -170,7 +206,7 @@ public static class Parser
 
             if (split.Length == 1)
             {
-                return new ResultAst(name, variables);
+                return new ResultAst(name, variables, line);
             }
             else if (split.Last().Trim() is not string last || string.IsNullOrEmpty(last))
             {
@@ -178,11 +214,11 @@ public static class Parser
             }
             else if (int.TryParse(last, out var response))
             {
-                return new ResultAst(name, variables, Response: response);
+                return new ResultAst(name, variables, line, Response: response);
             }
             else
             {
-                return new ResultAst(name, variables, Goto: last);
+                return new ResultAst(name, variables, line, Goto: last);
             }
         }
     }
