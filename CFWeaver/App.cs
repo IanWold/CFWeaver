@@ -16,7 +16,7 @@ public class App(string[] args, TextWriter textWriter, FileSystem fileSystem)
         /// <summary>
         /// Generates test scenarios from a control flow state diagram.
         /// </summary>
-        /// <param name="input">The input control flow state diagram.</param>
+        /// <param name="input">The path to the Markdown model file (see Model syntax below).</param>
         /// <param name="output">-o, The path to the output file.</param>
         /// <param name="format">-f, The format to output. [html|md]</param>
         [Command("")]
@@ -74,7 +74,13 @@ public class App(string[] args, TextWriter textWriter, FileSystem fileSystem)
             });
 
         app.Add<Commands>();
-        
+
         await app.RunAsync(args);
+
+        if (args is [] || args.Any(a => a is "-h" or "--help"))
+        {
+            textWriter.WriteLine();
+            textWriter.WriteLine(Help.Guide);
+        }
     }
 }
