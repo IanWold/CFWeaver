@@ -23,6 +23,10 @@ public static class Parser
             {
                 continue;
             }
+            else if (trimmedLine.First() == '*' && linesByOperation.Count == 0)
+            {
+                return Errors.StepOutsideOperation.Result(new(trimmedLine, i + 1));
+            }
             else if (trimmedLine.First() == '#')
             {
                 linesByOperation.Add([new(trimmedLine, i + 1)]);
@@ -106,7 +110,7 @@ public static class Parser
                 return Errors.OperationNoSteps.Result(lines.First());
             }
 
-            var name = lines.First().Text.Split('#').Last().Trim();
+            var name = lines.First().Text.TrimStart('#').Trim();
             if (string.IsNullOrEmpty(name))
             {
                 return Errors.OperationNoName.Result(lines.First());

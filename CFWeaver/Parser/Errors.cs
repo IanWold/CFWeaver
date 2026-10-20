@@ -14,8 +14,8 @@ static class Errors
             new([new(Code, Message, line)]);
     }
 
-    internal static readonly GeneralError InputNoOperations = new(1, "Input contains no operation definitions.");
-    internal static readonly GeneralError FileDoesNotExist = new(2, "Specified input file does not exist.");
+    internal static readonly GeneralError InputNoOperations = new(1, "Input contains no operation definitions");
+    internal static readonly GeneralError FileDoesNotExist = new(2, "Specified input file does not exist");
 
     internal static readonly LineError OperationNoSteps = new(101, "Operation contains no step definitions");
     internal static readonly LineError OperationNoName = new(102, "Operation has no name");
@@ -25,10 +25,11 @@ static class Errors
     internal static readonly LineError StepNameSpaces = new(203, "Step names must not contain spaces");
     internal static readonly LineError StepDuplicateName = new(204, "Step names must be unique within an operation");
     internal static readonly LineError StepNoResults = new(205, "Step has no results");
+    internal static readonly LineError StepOutsideOperation = new(206, "Step must come after an operation heading");
 
     internal static readonly LineError ResultNoName = new(301, "Result has no name");
     internal static readonly LineError ResultNoReturnOrGoto = new(302, "No return or goto value given for result");
-    internal static readonly LineError ResultDuplicateVariables = new(303, "Result must not contain variables with duplicate names.");
+    internal static readonly LineError ResultDuplicateVariables = new(303, "Result must not contain variables with duplicate names");
     internal static readonly LineError ResultGotoUnknownStep = new(304, "Result goes to a step that does not exist");
     internal static readonly LineError ResultGotoEarlierStep = new(305, "Result must go to a later step");
     internal static readonly LineError ResultFinalStepNoReturn = new(306, "Result on the final step must have a return value");

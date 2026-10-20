@@ -269,4 +269,54 @@ public class TestErrors
         Assert.Contains("(line 3 ", console);
         Assert.Empty(files);
     }
+
+    [Fact]
+    public async Task InputFileDoesNotExist()
+    {
+        var result = await RunTestAsync("missing.md -o output.html");
+
+        Assert.Contains("Error 2: Specified input file does not exist.", result.Error);
+        Assert.Equal(1, result.ExitCode);
+        Assert.Empty(result.Files);
+    }
+
+    [Fact]
+    public async Task StepOutsideOperation()
+    {
+        var (console, files) = await RunTestAsync("input.md -o output.html",
+            (
+                "input.md",
+                """
+                * Step: Success = 200
+
+                # Operation 1
+
+                * Step: Success = 200
+                """
+            )
+        );
+
+        Assert.Contains("206", console);
+        Assert.Contains("Step must come after an operation heading", console);
+        Assert.Empty(files);
+    }
+
+    [Fact]
+    public async Task ErrorsGoToStandardErrorWithExitCodeOne()
+    {
+        var result = await RunTestAsync("input.md -o output.html",
+            (
+                "input.md",
+                """
+                # Operation 1
+
+                * Step: Success = Missing | Failure = 400
+                """
+            )
+        );
+
+        Assert.Contains("Error 304", result.Error);
+        Assert.DoesNotContain("Error", result.Output);
+        Assert.Equal(1, result.ExitCode);
+    }
 }

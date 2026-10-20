@@ -58,8 +58,8 @@ public static class Help
         Output:
           One row per path: the result taken at each step (blank where the path skipped the step), the
           returned value (Respond), the joined conditions, and one column per variable. Use -f md for a
-          Markdown table. If the model is invalid, errors are printed with a code and line number and
-          no output is written.
+          Markdown table. If the model is invalid, errors are written to stderr with a code and line
+          number, no output is written, and cfweaver exits with code 1.
 
         Example:
           model.md:

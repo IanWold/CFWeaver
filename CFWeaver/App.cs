@@ -3,9 +3,11 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace CFWeaver;
 
-public class App(string[] args, TextWriter textWriter, FileSystem fileSystem)
+public class App(string[] args, TextWriter textWriter, TextWriter errorWriter, FileSystem fileSystem)
 {
-    public class Commands(TextWriter textWriter, FileSystem fileSystem)
+    public record Terminal(TextWriter Out, TextWriter Error);
+
+    public class Commands(Terminal terminal, FileSystem fileSystem)
     {
         public enum Format
         {
@@ -20,7 +22,7 @@ public class App(string[] args, TextWriter textWriter, FileSystem fileSystem)
         /// <param name="output">-o, The path to the output file.</param>
         /// <param name="format">-f, The format to output. [html|md]</param>
         [Command("")]
-        public async Task Compile(
+        public async Task<int> Compile(
             [Argument] string input,
             string output,
             Format format = Format.Html
@@ -28,18 +30,18 @@ public class App(string[] args, TextWriter textWriter, FileSystem fileSystem)
         {
             if (!fileSystem.TryReadAllText(input, out var content))
             {
-                textWriter.WriteLine(Errors.FileDoesNotExist);
-                return;
+                terminal.Error.WriteLine(Errors.FileDoesNotExist.Result().Errors.PrettyPrint());
+                return 1;
             }
 
-            textWriter.WriteLine($"Successfully read {input}.");
-            textWriter.WriteLine($"Beginning parse...");
+            terminal.Out.WriteLine($"Successfully read {input}.");
+            terminal.Out.WriteLine($"Beginning parse...");
 
-            await Parser.Parse(content).MapAsync(
+            return await Parser.Parse(content).Map(
                 success: async document =>
                 {
-                    textWriter.WriteLine($"Successfully parsed.");
-                    textWriter.WriteLine($"Writing to {output}...");
+                    terminal.Out.WriteLine($"Successfully parsed.");
+                    terminal.Out.WriteLine($"Writing to {output}...");
                     if (fileSystem.GetDirectoryName(output) is string outputDirectory
                         && !string.IsNullOrWhiteSpace(outputDirectory)
                         && !fileSystem.DirectoryExists(outputDirectory)
@@ -53,23 +55,24 @@ public class App(string[] args, TextWriter textWriter, FileSystem fileSystem)
                         Format.Html or _ => document.Html()
                     });
 
-                    textWriter.WriteLine($"Finished.");
+                    terminal.Out.WriteLine($"Finished.");
+                    return 0;
                 },
                 failure: errors =>
                 {
-                    textWriter.WriteLine(errors.PrettyPrint());
-                    return Task.CompletedTask;
+                    terminal.Error.WriteLine(errors.PrettyPrint());
+                    return Task.FromResult(1);
                 }
             );
         }
     }
-    
+
     public async Task RunAsync()
     {
         var app = ConsoleApp.Create()
             .ConfigureServices(services =>
             {
-                services.AddSingleton(textWriter);
+                services.AddSingleton(new Terminal(textWriter, errorWriter));
                 services.AddSingleton(fileSystem);
             });
 

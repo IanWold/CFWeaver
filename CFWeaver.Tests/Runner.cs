@@ -25,13 +25,15 @@ file class FakeFileSystem(Dictionary<string, string> inputFiles) : FileSystem
 
 public static class Runner
 {
-    public static async Task<(string console, Dictionary<string, string> files)> RunTestAsync(string args, params IEnumerable<(string path, string content)> inputFiles)
+    public static async Task<RunResult> RunTestAsync(string args, params IEnumerable<(string path, string content)> inputFiles)
     {
-        var sb = new StringBuilder();
+        var output = new StringBuilder();
+        var error = new StringBuilder();
         var files = new FakeFileSystem(inputFiles.ToDictionary(f => f.path, f => f.content));
 
-        await new App(args.Split(' '), new StringWriter(sb), files).RunAsync();
+        Environment.ExitCode = 0;
+        await new App(args.Split(' '), new StringWriter(output), new StringWriter(error), files).RunAsync();
 
-        return (sb.ToString(), files.OutputFiles);
+        return new(output.ToString(), error.ToString(), files.OutputFiles, Environment.ExitCode);
     }
 }
