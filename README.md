@@ -102,6 +102,14 @@ CFWeaver can support both black- and white-box testing strategies based on the u
 
 Engineers can of course also use CFWeaver to support white-box testing. By performing a static analysis on a codebase to derive the control flow diagram, CFWeaver can help find scenarios for particularly complex systems.
 
+# Use with LLMs
+
+CFWeaver works well with AI coding agents, which can read a codebase or a set of requirements, write the control flow model, and use CFWeaver to check it and generate the scenarios. Install CFWeaver where the agent can run it, giving the agent the full path if CFWeaver isn't on its PATH, and tell it to start with cfweaver --help. The help includes a complete guide to the model syntax with a worked example, so the agent doesn't need any other documentation. While it writes the model, the agent can run cfweaver model.md --check -f json after each change: the JSON report lists every error and warning with its code and line number, and the command exits with code 0 once the model is well-formed. Ask the agent to put source references and assumptions in each operation's description, the text between its heading and its first step. CFWeaver copies descriptions into its output, so you can see what each part of the model is based on. To write tests from the scenarios, the agent can run cfweaver model.md -o - -f json, which writes them as JSON to standard output. Keep in mind that --check only confirms the model is well-formed, not that it matches your system, so review the model as you would any other code the agent writes.
+
+```plaintext
+Analyze the endpoints in this API and model their control flow with CFWeaver, which is installed at <path>. Run `cfweaver --help` to learn the model syntax, check the model with `cfweaver model.md --check -f json` until it's well-formed, and then generate the scenarios with `cfweaver model.md -o scenarios.html`.
+```
+
 # Contributing
 
 Please do contribute! There's plenty that can be done.
