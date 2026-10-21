@@ -1,6 +1,8 @@
+using System.Reflection;
+
 namespace CFWeaver;
 
-public static class Help
+static class Tool
 {
     public const string ExampleModel =
         """
@@ -29,7 +31,7 @@ public static class Help
         scenario for every path through it.
 
         Model syntax:
-          The input is a Markdown file. Lines that don't start with #, * or - are ignored.
+          The input is a Markdown file.
 
           # Operation name        Each # heading starts an operation, which gets its own scenario table.
           * Step: A | B           Each * line under it is a step, a decision point, in the order the steps
@@ -47,22 +49,36 @@ public static class Help
           Every result on the last step must return a value.
 
         Conditions and variables:
-          After a result, "?" describes the condition that causes it, and "&" adds variables:
+          After a result's name and value, "?" starts its details, which are separated by "&":
             Failure = 403 ? the caller is not authenticated & Audited=yes
-          A result has at most one condition. Conditions along a path are joined with "and"; a variable
-          shows the last value assigned along the path.
+            Success ? Audited=no
+          A detail written name=value, where the name is one word (letters, digits, _, - or .), sets a
+          variable. Any other detail is the result's condition, and a result has at most one. Conditions
+          along a path are joined with "and"; a variable shows the last value assigned along the path.
 
-        Comments:
-          A - list before an operation's first step is a comment. After a step, - lines are its results.
+        Reserved characters:
+          "|" separates results and "&" separates details, so neither can appear in a result name,
+          condition or value. A result name can't contain "=" or "?"; after the "?", they're ordinary
+          text. Other punctuation, such as commas, quotes and "<", is fine anywhere: the outputs escape it.
+
+        Descriptions:
+          Text and - lists between an operation's heading and its first step describe the operation,
+          and text before the first operation describes the whole file. Descriptions are copied into
+          the output, so they're a good place for sources and assumptions. After a step, - lines are
+          its results, and any other text is ignored.
 
         Output:
           One row per path: the result taken at each step (blank where the path skipped the step), the
           returned value (Respond), the joined conditions, and one column per variable. Use -f md for a
           Markdown table, or -f json for each scenario's path, response, conditions and variables.
-          Use -o - to write to stdout instead of a file, or --check instead of -o to only validate the
-          model: it prints a summary, or the errors and warnings, and writes no output.
+          Use -o - to write to stdout instead of a file.
 
-          If the model is invalid, errors are written to stderr with a code and line number, no output
+          Use --check instead of -o to only check that the model is well-formed: it prints the number
+          of scenarios in each operation, or the errors and warnings, and with -f json it prints them
+          as JSON. A well-formed model isn't necessarily an accurate one; --check doesn't compare the
+          model with the system it describes.
+
+          If the model has errors, they're written to stderr with a code and line number, no output
           is written, and cfweaver exits with code 1. Warnings, such as a step that no path reaches,
           are also written to stderr but don't stop the output.
 
@@ -76,7 +92,14 @@ public static class Help
         {Indent(ExampleTable, 4)}
 
         Full documentation: https://github.com/IanWold/CFWeaver/wiki
-        """.ReplaceLineEndings();
+        """
+        .ReplaceLineEndings();
+        
+    internal static string Version { get; } =
+        (typeof(Tool).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "1.0.0").Split('+')[0];
+
+    internal static string Name =>
+        $"CFWeaver {Version}";
 
     static string Indent(string text, int spaces) =>
         string.Join(Environment.NewLine, text.ReplaceLineEndings("\n").Split('\n').Select(l => l.Length > 0 ? new string(' ', spaces) + l : l));

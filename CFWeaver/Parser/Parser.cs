@@ -1,6 +1,8 @@
 ﻿namespace CFWeaver;
 
-file record OperationAst(string Name, IEnumerable<StepAst> Steps);
+file record OperationLines(Line Heading, List<string> Description, List<Line> Steps);
+
+file record OperationAst(string Name, string Description, IEnumerable<StepAst> Steps);
 
 file record StepAst(string Name, IEnumerable<ResultAst> Results, Line Line);
 
@@ -13,41 +15,59 @@ public static class Parser
     public static ParseResult<Document> Parse(string source)
     {
         var lines = source.Split('\n');
-        List<List<Line>> linesByOperation = [];
+        var preamble = new List<string>();
+        var operations = new List<OperationLines>();
 
         for (int i = 0; i < lines.Length; i++)
         {
-            var trimmedLine = lines[i].Trim();
+            var line = lines[i].TrimEnd();
+            var trimmedLine = line.Trim();
+            var operation = operations.LastOrDefault();
 
-            if (string.IsNullOrEmpty(trimmedLine))
+            if (trimmedLine.StartsWith('#'))
             {
-                continue;
+                operations.Add(new(new(trimmedLine, i + 1), [], []));
             }
-            else if (trimmedLine.First() == '*' && linesByOperation.Count == 0)
+            else if (trimmedLine.StartsWith('*'))
             {
-                return Errors.StepOutsideOperation.Result(new(trimmedLine, i + 1));
+                if (operation is null)
+                {
+                    return Diagnostics.Errors.StepOutsideOperation.Result(new(trimmedLine, i + 1));
+                }
+
+                operation.Steps.Add(new(trimmedLine, i + 1));
             }
-            else if (trimmedLine.First() == '#')
+            else if (operation is null)
             {
-                linesByOperation.Add([new(trimmedLine, i + 1)]);
+                preamble.Add(line);
             }
-            else if (trimmedLine.First() == '*' || trimmedLine.First() == '-' && linesByOperation.Count > 0)
+            else if (operation.Steps.Count == 0)
             {
-                linesByOperation.Last().Add(new(trimmedLine, i + 1));
+                operation.Description.Add(line);
+            }
+            else if (trimmedLine.StartsWith('-'))
+            {
+                operation.Steps.Add(new(trimmedLine, i + 1));
             }
         }
 
-        if (linesByOperation.Count == 0)
+        if (operations.Count == 0)
         {
-            return Errors.InputNoOperations.Result();
+            return Diagnostics.Errors.InputNoOperations.Result();
         }
 
-        return linesByOperation
-            .Select(lines => ParseOperation(lines).Map(
+        return operations
+            .Select(operation => ParseOperation(operation).Map(
                 success: Resolve,
                 failure: errors => new FailureResult(errors)
             ))
-            .Coalesce(operations => new Document(operations));
+            .Coalesce(resolved => new Document(resolved, Describe(preamble)));
+
+        static string Describe(IEnumerable<string> lines)
+        {
+            var trimmed = (string[])[..lines.SkipWhile(string.IsNullOrWhiteSpace).Reverse().SkipWhile(string.IsNullOrWhiteSpace).Reverse()];
+            return string.Join("\n", trimmed.Where((line, i) => line.Length > 0 || trimmed[i - 1].Length > 0));
+        }
 
         static ParseResult<Operation> Resolve(OperationAst ast)
         {
@@ -55,17 +75,17 @@ public static class Parser
 
             return steps
                 .Select(ResolveStep)
-                .Coalesce(resolved => new Operation(ast.Name, resolved));
+                .Coalesce(resolved => new Operation(ast.Name, resolved, ast.Description));
 
             ParseResult<Step> ResolveStep(StepAst step, int index)
             {
                 if (steps.FindIndex(s => s.Name == step.Name) != index)
                 {
-                    return Errors.StepDuplicateName.Result(step.Line);
+                    return Diagnostics.Errors.StepDuplicateName.Result(step.Line);
                 }
                 else if (!step.Results.Any())
                 {
-                    return Errors.StepNoResults.Result(step.Line);
+                    return Diagnostics.Errors.StepNoResults.Result(step.Line);
                 }
 
                 return step.Results
@@ -88,52 +108,51 @@ public static class Parser
 
                 if (target == -1)
                 {
-                    return Errors.ResultGotoUnknownStep.Result(result.Line);
+                    return Diagnostics.Errors.ResultGotoUnknownStep.Result(result.Line);
                 }
                 else if (target <= index)
                 {
-                    return Errors.ResultGotoEarlierStep.Result(result.Line);
+                    return Diagnostics.Errors.ResultGotoEarlierStep.Result(result.Line);
                 }
                 else if (target == steps.Count)
                 {
-                    return Errors.ResultFinalStepNoReturn.Result(result.Line);
+                    return Diagnostics.Errors.ResultFinalStepNoReturn.Result(result.Line);
                 }
 
                 return new GotoResult(result.Name, variables, steps[target].Name);
             }
         }
 
-        static ParseResult<OperationAst> ParseOperation(IEnumerable<Line> lines)
+        static ParseResult<OperationAst> ParseOperation(OperationLines operation)
         {
-            if (lines.Count() < 2)
+            if (operation.Steps.Count == 0)
             {
-                return Errors.OperationNoSteps.Result(lines.First());
+                return Diagnostics.Errors.OperationNoSteps.Result(operation.Heading);
             }
 
-            var name = lines.First().Text.TrimStart('#').Trim();
+            var name = operation.Heading.Text.TrimStart('#').Trim();
             if (string.IsNullOrEmpty(name))
             {
-                return Errors.OperationNoName.Result(lines.First());
+                return Diagnostics.Errors.OperationNoName.Result(operation.Heading);
             }
-            
-            var stepLines = lines.Skip(1);
-            List<List<Line>> linesByOperation = [];
 
-            foreach (var stepLine in stepLines)
+            var linesByStep = new List<List<Line>>();
+
+            foreach (var stepLine in operation.Steps)
             {
-                if (stepLine.Text.First() == '*')
+                if (stepLine.Text.StartsWith('*'))
                 {
-                    linesByOperation.Add([stepLine]);
+                    linesByStep.Add([stepLine]);
                 }
-                else if (stepLine.Text.First() == '-' && linesByOperation.Count > 0)
+                else
                 {
-                    linesByOperation.Last().Add(stepLine);
+                    linesByStep.Last().Add(stepLine);
                 }
             }
 
-            return linesByOperation
+            return linesByStep
                 .Select(l => ParseStep(l.First(), l.Skip(1)))
-                .Coalesce(steps => new OperationAst(name, steps));
+                .Coalesce(steps => new OperationAst(name, Describe(operation.Description), steps));
         }
         
         static ParseResult<StepAst> ParseStep(Line headerLine, IEnumerable<Line> resultLines)
@@ -159,15 +178,15 @@ public static class Parser
 
             if (isOnlyName && name.Contains(' '))
             {
-                return Errors.StepNoColon.Result(line);
+                return Diagnostics.Errors.StepNoColon.Result(line);
             }
             else if (string.IsNullOrEmpty(name))
             {
-                return Errors.StepNoName.Result(line);
+                return Diagnostics.Errors.StepNoName.Result(line);
             }
             else if (name.Contains(' '))
             {
-                return Errors.StepNameSpaces.Result(line);
+                return Diagnostics.Errors.StepNameSpaces.Result(line);
             }
 
             return isOnlyName
@@ -181,31 +200,36 @@ public static class Parser
         {
             var variablesSplit = line.Text.Split('?', 2);
 
-            var split = variablesSplit.First().Split('=');
-            var variablesText = variablesSplit.Length > 1 ? variablesSplit.Last().Trim().Split('&') : [];
+            var split = variablesSplit.First().Split('=', 2);
+            var variablesText = variablesSplit.Length > 1 ? variablesSplit.Last().Split('&').Where(v => !string.IsNullOrWhiteSpace(v)) : [];
             var variables = variablesText.Select(v => {
                 var assignmentSplit = v.Split('=', 2, StringSplitOptions.TrimEntries);
-                return assignmentSplit.Length > 1
+                return assignmentSplit.Length > 1 && IsVariableName(assignmentSplit.First())
                     ? new VariableAst(
                         Name: assignmentSplit.First(),
                         Value: assignmentSplit.Last()
                     )
                     : new VariableAst(
                         Name: "Condition",
-                        Value: assignmentSplit.First()
+                        Value: v.Trim()
                     );
-            });
+            }).ToList();
+
+            if (variables.Count(v => v.Name == "Condition") > 1)
+            {
+                return Diagnostics.Errors.ResultMultipleConditions.Result(line);
+            }
 
             var duplicateVariableNames = variables.GroupBy(v => v.Name).Where(g => g.Count() > 1).Select(g => g.Key);
             if (duplicateVariableNames.Any())
             {
-                return Errors.ResultDuplicateVariables.Result(line);
+                return Diagnostics.Errors.ResultDuplicateVariables.Result(line);
             }
 
             var name = split.First().Trim();
             if (string.IsNullOrEmpty(name))
             {
-                return Errors.ResultNoName.Result(line);
+                return Diagnostics.Errors.ResultNoName.Result(line);
             }
 
             if (split.Length == 1)
@@ -214,16 +238,23 @@ public static class Parser
             }
             else if (split.Last().Trim() is not string last || string.IsNullOrEmpty(last))
             {
-                return Errors.ResultNoReturnOrGoto.Result(line);
+                return Diagnostics.Errors.ResultNoReturnOrGoto.Result(line);
             }
             else if (int.TryParse(last, out var response))
             {
                 return new ResultAst(name, variables, line, Response: response);
             }
+            else if (last.Any(c => char.IsWhiteSpace(c) || c is '&' or '='))
+            {
+                return Diagnostics.Errors.ResultValueNotSingleWord.Result(line);
+            }
             else
             {
                 return new ResultAst(name, variables, line, Goto: last);
             }
+
+            static bool IsVariableName(string name) =>
+                name.Length > 0 && name.All(c => char.IsLetterOrDigit(c) || c is '_' or '-' or '.');
         }
     }
 }

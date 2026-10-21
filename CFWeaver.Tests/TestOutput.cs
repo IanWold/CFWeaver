@@ -133,7 +133,7 @@ public class TestOutput
             )
         );
 
-        Assert.Contains("Warning (line 4 \"* Second: Done = 201\"): No path reaches this step.", result.Error);
+        Assert.Contains("Warning 1001 (line 4 \"* Second: Done = 201\"): No path reaches this step.", result.Error);
         Assert.DoesNotContain("Third", result.Error);
         Assert.Equal(0, result.ExitCode);
         Assert.Contains("output.md", result.Files.Keys);
@@ -155,8 +155,15 @@ public class TestOutput
             )
         );
 
-        Assert.Equal("Model is valid: 1 operation, 3 scenarios.", result.Output.Trim());
-        Assert.Contains("Warning (line 4 \"* Second: Done = 201\"): No path reaches this step.", result.Error);
+        Assert.Equal(
+            """
+            Model is well-formed: 1 operation, 3 scenarios.
+              Operation 1: 3 scenarios
+            """,
+            result.Output.Trim(),
+            ignoreLineEndingDifferences: true
+        );
+        Assert.Contains("Warning 1001 (line 4 \"* Second: Done = 201\"): No path reaches this step.", result.Error);
         Assert.Equal(0, result.ExitCode);
         Assert.Empty(result.Files);
     }
@@ -195,8 +202,187 @@ public class TestOutput
             )
         );
 
-        Assert.Equal("Model is valid: 1 operation, 2 scenarios.", result.Output.Trim());
+        Assert.StartsWith("Model is well-formed: 1 operation, 2 scenarios.", result.Output);
         Assert.Equal(0, result.ExitCode);
         Assert.Empty(result.Files);
+    }
+
+    [Fact]
+    public async Task CheckReportsJsonDiagnostics()
+    {
+        var result = await RunTestAsync("input.md --check -f json",
+            (
+                "input.md",
+                """
+                # Operation 1
+
+                * First: Done = 200 | Skip = Third
+                * Second: Done = 201
+                * Third: Done = 202 | Failure = 500
+                """
+            )
+        );
+
+        using var json = JsonDocument.Parse(result.Output);
+        var operation = json.RootElement.GetProperty("operations").EnumerateArray().Single();
+        var diagnostic = json.RootElement.GetProperty("diagnostics").EnumerateArray().Single();
+
+        Assert.True(json.RootElement.GetProperty("wellFormed").GetBoolean());
+        Assert.Equal("Operation 1", operation.GetProperty("name").GetString());
+        Assert.Equal(3, operation.GetProperty("scenarios").GetInt32());
+        Assert.Equal("warning", diagnostic.GetProperty("severity").GetString());
+        Assert.Equal(1001, diagnostic.GetProperty("code").GetInt32());
+        Assert.Equal(4, diagnostic.GetProperty("line").GetInt32());
+        Assert.Equal("* Second: Done = 201", diagnostic.GetProperty("text").GetString());
+        Assert.Empty(result.Error);
+        Assert.Equal(0, result.ExitCode);
+    }
+
+    [Fact]
+    public async Task CheckReportsJsonErrors()
+    {
+        var result = await RunTestAsync("input.md --check -f json",
+            (
+                "input.md",
+                """
+                # Operation 1
+
+                * Step: Success = Missing | Failure = 400
+                """
+            )
+        );
+
+        using var json = JsonDocument.Parse(result.Output);
+        var diagnostic = json.RootElement.GetProperty("diagnostics").EnumerateArray().Single();
+
+        Assert.False(json.RootElement.GetProperty("wellFormed").GetBoolean());
+        Assert.Empty(json.RootElement.GetProperty("operations").EnumerateArray());
+        Assert.Equal("error", diagnostic.GetProperty("severity").GetString());
+        Assert.Equal(304, diagnostic.GetProperty("code").GetInt32());
+        Assert.Equal(3, diagnostic.GetProperty("line").GetInt32());
+        Assert.Empty(result.Error);
+        Assert.Equal(1, result.ExitCode);
+    }
+
+    [Fact]
+    public async Task DiagramShowsReturnsAndLabelsEdges()
+    {
+        var (_, files) = await RunTestAsync("input.md -o output.md -f md",
+            (
+                "input.md",
+                """
+                # Operation 1
+
+                * Authenticate: Success | Failure = 403
+                * Lookup: Found | Cached | NotFound = 404 | Gone = 404
+                * Finish: OK = 200
+                """
+            )
+        );
+
+        var lines = files["output.md"].Split('\n').Select(l => l.TrimEnd('\r'));
+
+        Assert.Equal(
+            """
+            stateDiagram-v2
+            direction LR
+            state "403" as Respond403
+            state "404" as Respond404
+            state "200" as Respond200
+            [*] --> Authenticate
+            Authenticate --> Lookup: Success
+            Authenticate --> Respond403: Failure
+            Lookup --> Finish: Found, Cached
+            Lookup --> Respond404: NotFound, Gone
+            Finish --> Respond200: OK
+            Respond403 --> [*]
+            Respond404 --> [*]
+            Respond200 --> [*]
+            """,
+            string.Join("\n", lines.SkipWhile(l => l != "```mermaid").Skip(1).TakeWhile(l => l != "```")),
+            ignoreLineEndingDifferences: true
+        );
+    }
+
+    [Fact]
+    public async Task CsvQuotesFieldsAndClosesItsFence()
+    {
+        var (_, files) = await RunTestAsync("input.md -o output.md -f md",
+            (
+                "input.md",
+                """
+                # Operation 1
+
+                * Step: Low = 400 ? limit is below 1, or "missing" | Ok = 200
+                """
+            )
+        );
+
+        var lines = files["output.md"].Split('\n').Select(l => l.TrimEnd('\r'));
+
+        Assert.Equal(
+            """"
+            Step,Respond,Condition
+            Low,400,"limit is below 1, or ""missing"""
+            Ok,200,
+            ```
+            """",
+            string.Join("\n", lines.SkipWhile(l => l != "```csv").Skip(1).Take(4)),
+            ignoreLineEndingDifferences: true
+        );
+    }
+
+    [Fact]
+    public async Task HtmlEscapesModelText()
+    {
+        var (_, files) = await RunTestAsync("input.md -o output.html",
+            (
+                "input.md",
+                """
+                # Get an <Item>
+
+                * Step: Low = 400 ? limit < 1 | Ok = 200
+                """
+            )
+        );
+
+        var html = files["output.html"];
+
+        Assert.Contains("<h2>Get an &lt;Item&gt;</h2>", html);
+        Assert.Contains("<td>limit &lt; 1</td>", html);
+        Assert.DoesNotContain("<Item>", html);
+        Assert.DoesNotContain("limit < 1", html);
+    }
+
+    [Fact]
+    public async Task DescriptionsAreCopiedToOutput()
+    {
+        var model =
+            """
+            Models for the Items API.
+
+            # Get Item
+
+            - Source: `ItemsController.cs:10`
+
+            Assumes the host started.
+
+            * Step: Success = 200 | Failure = 500
+            """;
+
+        var json = await RunTestAsync("input.md -o - -f json", ("input.md", model));
+        var markdown = await RunTestAsync("input.md -o - -f md", ("input.md", model));
+        var html = await RunTestAsync("input.md -o - -f html", ("input.md", model));
+
+        using var document = JsonDocument.Parse(json.Output);
+        var operation = document.RootElement.GetProperty("operations").EnumerateArray().Single();
+
+        Assert.StartsWith("CFWeaver ", document.RootElement.GetProperty("generator").GetString());
+        Assert.Equal("Models for the Items API.", document.RootElement.GetProperty("description").GetString());
+        Assert.Equal("- Source: `ItemsController.cs:10`\n\nAssumes the host started.", operation.GetProperty("description").GetString());
+        Assert.Contains("- Source: `ItemsController.cs:10`", markdown.Output);
+        Assert.StartsWith("Models for the Items API.", markdown.Output);
+        Assert.Contains("<li>Source: <code>ItemsController.cs:10</code></li>", html.Output);
+        Assert.Contains("<p>Assumes the host started.</p>", html.Output);
     }
 }

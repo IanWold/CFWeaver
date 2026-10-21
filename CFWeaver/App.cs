@@ -22,7 +22,7 @@ public class App(string[] args, TextWriter textWriter, TextWriter errorWriter, F
         /// <param name="input">The path to the Markdown model file (see Model syntax below).</param>
         /// <param name="output">-o, The path to the output file, or - to write to stdout. Required unless --check is given.</param>
         /// <param name="format">-f, The format to output. [html|md|json]</param>
-        /// <param name="check">Only validate the model: report errors and warnings without writing any output.</param>
+        /// <param name="check">Only check that the model is well-formed; writes no output. With -f json, reports as JSON.</param>
         [Command("")]
         public async Task<int> Compile(
             [Argument] string input,
@@ -33,13 +33,18 @@ public class App(string[] args, TextWriter textWriter, TextWriter errorWriter, F
         {
             if (!check && output is null)
             {
-                terminal.Error.WriteLine(Errors.OutputNotSpecified.Result().Errors.PrettyPrint());
+                terminal.Error.WriteLine(Diagnostics.Errors.OutputNotSpecified.Result().Errors.PrettyPrint());
                 return 1;
             }
 
             if (!fileSystem.TryReadAllText(input, out var content))
             {
-                terminal.Error.WriteLine(Errors.FileDoesNotExist.Result().Errors.PrettyPrint());
+                if (check)
+                {
+                    return Report(new(Diagnostics.Errors.FileDoesNotExist.Result().Errors, [], []));
+                }
+
+                terminal.Error.WriteLine(Diagnostics.Errors.FileDoesNotExist.Result().Errors.PrettyPrint());
                 return 1;
             }
 
@@ -54,17 +59,14 @@ public class App(string[] args, TextWriter textWriter, TextWriter errorWriter, F
                 {
                     log.WriteLine($"Successfully parsed.");
 
+                    if (check)
+                    {
+                        return Report(new([], document.Warnings, document.Operations));
+                    }
+
                     foreach (var warning in document.Warnings)
                     {
                         terminal.Error.WriteLine(warning);
-                    }
-
-                    if (check)
-                    {
-                        var operations = document.Operations.Count();
-                        var scenarios = document.Operations.Sum(o => o.Scenarios.Count);
-                        terminal.Out.WriteLine($"Model is valid: {operations} operation{(operations == 1 ? "" : "s")}, {scenarios} scenario{(scenarios == 1 ? "" : "s")}.");
-                        return 0;
                     }
 
                     var rendered = format switch {
@@ -95,10 +97,37 @@ public class App(string[] args, TextWriter textWriter, TextWriter errorWriter, F
                 },
                 failure: errors =>
                 {
+                    if (check)
+                    {
+                        return Task.FromResult(Report(new(errors, [], [])));
+                    }
+
                     terminal.Error.WriteLine(errors.PrettyPrint());
                     return Task.FromResult(1);
                 }
             );
+
+            int Report(CheckReport report)
+            {
+                if (format == Format.Json)
+                {
+                    terminal.Out.WriteLine(report.Json());
+                }
+                else
+                {
+                    foreach (var diagnostic in report.Errors.Select(e => e.ToString()).Concat(report.Warnings.Select(w => w.ToString())))
+                    {
+                        terminal.Error.WriteLine(diagnostic);
+                    }
+
+                    if (report.IsWellFormed)
+                    {
+                        terminal.Out.WriteLine(report.Summary());
+                    }
+                }
+
+                return report.IsWellFormed ? 0 : 1;
+            }
         }
     }
 
@@ -118,7 +147,7 @@ public class App(string[] args, TextWriter textWriter, TextWriter errorWriter, F
         if (args is [] || args.Any(a => a is "-h" or "--help"))
         {
             textWriter.WriteLine();
-            textWriter.WriteLine(Help.Guide);
+            textWriter.WriteLine(Tool.Guide);
         }
     }
 }

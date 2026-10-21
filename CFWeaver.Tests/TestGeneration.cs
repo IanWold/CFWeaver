@@ -268,4 +268,55 @@ public class TestGeneration
             ignoreLineEndingDifferences: true
         );
     }
+
+    [Fact]
+    public async Task ConditionsMayContainEquals()
+    {
+        var (_, files) = await RunTestAsync("input.md -o output.md -f md",
+            (
+                "input.md",
+                """
+                # Operation 1
+
+                * Sum: Over = 400 ? limit + offset = 10000 | Fine = 200 ? Condition = the sum is lower & DidError = no
+                """
+            )
+        );
+
+        Assert.Equal(
+            """
+            |Sum|Respond|Condition|DidError|
+            |---|---|---|---|
+            |Over|400|limit + offset = 10000||
+            |Fine|200|the sum is lower|no|
+            """,
+            ExtractTable(files),
+            ignoreLineEndingDifferences: true
+        );
+    }
+
+    [Fact]
+    public async Task VariablesDoNotNeedConditions()
+    {
+        var (_, files) = await RunTestAsync("input.md -o output.md -f md",
+            (
+                "input.md",
+                """
+                # Operation 1
+
+                * End: OK = 200 ? Flag=yes
+                """
+            )
+        );
+
+        Assert.Equal(
+            """
+            |End|Respond|Condition|Flag|
+            |---|---|---|---|
+            |OK|200||yes|
+            """,
+            ExtractTable(files),
+            ignoreLineEndingDifferences: true
+        );
+    }
 }

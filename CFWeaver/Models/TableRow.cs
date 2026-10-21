@@ -5,16 +5,16 @@ namespace CFWeaver;
 public record TableRow(IEnumerable<string> Cells)
 {
     internal void AppendCsv(StringBuilder sb) => sb
-        .AppendLine()
-        .AppendJoin(",", Cells);
+        .AppendJoin(",", Cells.Select(c => c.CsvField()))
+        .AppendLine();
 
     internal void AppendHtml(StringBuilder sb) => sb
         .AppendLine("<tr>")
-        .AppendJoin("", Cells.Select(c => $"<td>{c}</td>"))
+        .AppendJoin("", Cells.Select(c => $"<td>{c.HtmlEncode()}</td>"))
         .AppendLine("</tr>");
 
     internal void AppendMarkdown(StringBuilder sb) => sb
         .Append('|')
-        .AppendJoin("|", Cells)
+        .AppendJoin("|", Cells.Select(c => c.MarkdownCell()))
         .AppendLine("|");
 }

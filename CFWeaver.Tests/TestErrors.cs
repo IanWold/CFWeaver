@@ -338,4 +338,42 @@ public class TestErrors
         Assert.DoesNotContain("Error", result.Output);
         Assert.Equal(1, result.ExitCode);
     }
+
+    [Fact]
+    public async Task ResultValueMustBeSingleWord()
+    {
+        var (console, files) = await RunTestAsync("input.md -o output.html",
+            (
+                "input.md",
+                """
+                # Operation 1
+
+                * Step: Success = 200 & Flag=yes
+                """
+            )
+        );
+
+        Assert.Contains("307", console);
+        Assert.Contains("Return or goto value must be a number or a single step name; variables go after `?`", console);
+        Assert.Empty(files);
+    }
+
+    [Fact]
+    public async Task ResultHasMultipleConditions()
+    {
+        var (console, files) = await RunTestAsync("input.md -o output.html",
+            (
+                "input.md",
+                """
+                # Operation 1
+
+                * Step: Failure = 400 ? sort & order are both missing | Success = 200
+                """
+            )
+        );
+
+        Assert.Contains("308", console);
+        Assert.Contains("Result has more than one condition", console);
+        Assert.Empty(files);
+    }
 }

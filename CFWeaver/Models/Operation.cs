@@ -3,8 +3,11 @@ using System.Text.Json;
 
 namespace CFWeaver;
 
-public record Operation(string Name, IEnumerable<Step> Steps)
+public record Operation(string Name, IEnumerable<Step> Steps, string Description = "")
 {
+    internal static string RespondState(int response) =>
+        response < 0 ? $"RespondMinus{-(long)response}" : $"Respond{response}";
+
     internal IReadOnlyList<Scenario> Scenarios
     {
         get
@@ -58,7 +61,7 @@ public record Operation(string Name, IEnumerable<Step> Steps)
 
             return Steps
                 .Where(s => !reached.Contains(s.Name))
-                .Select(s => new Warning("No path reaches this step", s.Line));
+                .Select(s => Diagnostics.Warnings.StepUnreachable.Warning(s.Line));
 
             void Reach(Step step)
             {
@@ -100,6 +103,7 @@ public record Operation(string Name, IEnumerable<Step> Steps)
     {
         writer.WriteStartObject();
         writer.WriteString("name", Name);
+        writer.WriteString("description", Description);
 
         writer.WriteStartArray("scenarios");
         foreach (var scenario in Scenarios)
@@ -111,27 +115,45 @@ public record Operation(string Name, IEnumerable<Step> Steps)
         writer.WriteEndObject();
     }
 
-    internal void AppendMermaid(StringBuilder sb) => sb
-        .AppendLine("stateDiagram-v2")
-        .AppendLine("direction LR")
-        .AppendLine($"[*] --> {Steps.First().Name}")
-        .AppendDelegate(Steps.Select(s => (Action<StringBuilder>)s.AppendMermaid));
+    internal void AppendMermaid(StringBuilder sb)
+    {
+        var responses = Steps.SelectMany(s => s.Results).OfType<RespondResult>().Select(r => r.Response).Distinct().ToList();
+
+        sb
+            .AppendLine("stateDiagram-v2")
+            .AppendLine("direction LR")
+            .AppendDelegate(responses.Select(r => (Action<StringBuilder>)(sb => sb.AppendLine($"state \"{r}\" as {RespondState(r)}"))))
+            .AppendLine($"[*] --> {Steps.First().Name}")
+            .AppendDelegate(Steps.Select(s => (Action<StringBuilder>)s.AppendMermaid))
+            .AppendDelegate(responses.Select(r => (Action<StringBuilder>)(sb => sb.AppendLine($"{RespondState(r)} --> [*]"))));
+    }
+
+    string MermaidHtml =>
+        new StringBuilder().AppendDelegate(AppendMermaid).ToString().HtmlEncode();
+
+    string Anchor =>
+        Name.Replace(" ", "-").HtmlEncode();
+
+    internal string NavigationHtml =>
+        $"<li><a href=\"#{Anchor}\">{Name.HtmlEncode()}</a></li>";
 
     internal void AppendHtml(StringBuilder sb) => sb
-        .AppendLine($"<section id=\"{Name.Replace(" ", "-")}\"><header><h2>{Name}</h2></header>")
+        .AppendLine($"<section id=\"{Anchor}\"><header><h2>{Name.HtmlEncode()}</h2></header>")
+        .Append(Description.MarkdownToHtml())
         .AppendLine("<div style=\"display: flex; justify-content: center; width: 100%;margin-bottom:32px;\" class=\"mermaid\">")
-        .AppendDelegate(AppendMermaid)
+        .Append(MermaidHtml)
         .AppendLine("</div>")
         .AppendDelegate(ResultTable.AppendHtml)
         .Append("</section><main style=\"padding:0;\"><details><summary>Mermaid</summary><pre style=\"max-width:100%;\"><code style=\"max-width:100%;\">")
-        .AppendDelegate(AppendMermaid)
-        .Append("</pre></code></details><details><summary>CSV</summary><pre style=\"max-width:100%;\"><code style=\"max-width:100%;\">")
-        .AppendDelegate(ResultTable.AppendCsv)
-        .AppendLine("</pre></code></details></main><hr/>");
+        .Append(MermaidHtml)
+        .Append("</code></pre></details><details><summary>CSV</summary><pre style=\"max-width:100%;\"><code style=\"max-width:100%;\">")
+        .Append(new StringBuilder().AppendDelegate(ResultTable.AppendCsv).ToString().HtmlEncode())
+        .AppendLine("</code></pre></details></main><hr/>");
 
     internal void AppendMarkdown(StringBuilder sb) => sb
         .AppendLine($"# {Name}")
         .AppendLine()
+        .Append(Description.Length > 0 ? $"{Description.ReplaceLineEndings()}{Environment.NewLine}{Environment.NewLine}" : "")
         .AppendLine("```mermaid")
         .AppendDelegate(AppendMermaid)
         .AppendLine("```")

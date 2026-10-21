@@ -4,16 +4,14 @@ namespace CFWeaver;
 
 public record Step(string Name, IEnumerable<Result> Results, Line Line)
 {
-    internal void AppendMermaid(StringBuilder sb)
-    {
-        if (Results.OfType<GotoResult>() is IEnumerable<GotoResult> gotoResults && gotoResults.Any())
+    internal void AppendMermaid(StringBuilder sb) => sb.AppendDelegate(
+        Results
+        .GroupBy(r => r switch
         {
-            sb.AppendJoin("\r\n", gotoResults.Select(g => $"{Name} --> {g.Goto}"));
-            sb.AppendLine();
-        }
-        else
-        {
-            sb.AppendLine($"{Name} --> [*]");
-        }
-    }
+            GotoResult gotoResult => gotoResult.Goto,
+            RespondResult respond => Operation.RespondState(respond.Response),
+            _ => throw new InvalidOperationException($"Unknown result type {r.GetType().Name}")
+        })
+        .Select(target => (Action<StringBuilder>)(sb => sb.AppendLine($"{Name} --> {target.Key}: {string.Join(", ", target.Select(r => r.Name))}")))
+    );
 }
