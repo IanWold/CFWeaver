@@ -15,6 +15,30 @@ public class TestHelp
     }
 
     [Fact]
+    public async Task HelpPrintsAgentInstructions()
+    {
+        var result = await RunTestAsync("help agents");
+
+        Assert.StartsWith("These instructions are for AI agents using CFWeaver.", result.Output);
+        Assert.Contains("## Rules That Are Easy to Get Wrong", result.Output);
+        Assert.Equal(0, result.ExitCode);
+    }
+
+    [Fact]
+    public async Task HelpPrintsAgentInstructionsAsSkill()
+    {
+        var result = await RunTestAsync("help skill");
+        var lines = result.Output.Split('\n').Select(l => l.TrimEnd('\r')).ToList();
+
+        Assert.Equal("---", lines[0]);
+        Assert.Equal("name: cfweaver", lines[1]);
+        Assert.StartsWith("description: ", lines[2]);
+        Assert.Equal("---", lines[3]);
+        Assert.Contains("These instructions are for AI agents using CFWeaver.", result.Output);
+        Assert.Equal(0, result.ExitCode);
+    }
+
+    [Fact]
     public async Task HelpPrintsModelingRecipes()
     {
         var result = await RunTestAsync("help recipes");

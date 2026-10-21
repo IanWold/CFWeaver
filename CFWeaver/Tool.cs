@@ -28,7 +28,7 @@ static class Tool
     public static string Guide =>
         $"""
         CFWeaver reads a control flow state model (CFSM) written in Markdown and generates one test
-        scenario for every path through it.
+        scenario for every path through it. AI agents: run cfweaver help agents first.
 
         Model syntax:
           The input is a Markdown file.
@@ -144,14 +144,30 @@ static class Tool
     const string Topics =
         """
         More help, built in:
+          cfweaver help agents      Instructions for AI agents using CFWeaver.
+          cfweaver help skill       The same instructions, as a SKILL.md file for agents that use skills.
           cfweaver help recipes     How to model loops, retries, exceptions and other common patterns.
           cfweaver help errors      Every error and warning, with examples.
           cfweaver help <code>      One error or warning, such as cfweaver help 309.
         """;
 
+    const string SkillHeader =
+        """
+        ---
+        name: cfweaver
+        description: Model the control flow of an API or other code as a CFWeaver control flow state model (CFSM) in Markdown, check it, and generate one test scenario for every path through it. Use when asked to model control flow, list test scenarios or paths, or use CFWeaver.
+        ---
+
+        # CFWeaver
+
+
+        """;
+
     internal static string? Topic(string? topic) => topic switch
     {
         null => Topics.ReplaceLineEndings(),
+        "agents" => Assets.AIAgents.ReplaceLineEndings(),
+        "skill" => $"{SkillHeader}{Assets.AIAgents}".ReplaceLineEndings(),
         "recipes" => Assets.ModelingRecipes.ReplaceLineEndings(),
         "errors" => Assets.ParserErrors.ReplaceLineEndings(),
         _ when topic.All(char.IsAsciiDigit) => ErrorEntry(topic),

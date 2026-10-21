@@ -24,7 +24,7 @@ CFWeaver needs somewhere to write its output. Give a file with `-o`, use `-o -` 
 
 ## `5` No help topic with that name; run `cfweaver help` to list the topics
 
-`cfweaver help` takes `recipes`, `errors`, or an error or warning code such as `309`. Run `cfweaver help` on its own to list the topics.
+`cfweaver help` takes `agents`, `skill`, `recipes`, `errors`, or an error or warning code such as `309`. Run `cfweaver help` on its own to list the topics.
 
 ## `101` Operation contains no step definitions
 

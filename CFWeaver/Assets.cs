@@ -16,6 +16,9 @@ static class Assets
     internal static string StyleSheet =>
         WithLicense($"mvp-{StyleSheetVersion}.LICENSE", Read($"mvp-{StyleSheetVersion}.css"));
 
+    internal static string AIAgents =>
+        Read("AI-Agents.md");
+
     internal static string ModelingRecipes =>
         Read("Modeling-Recipes.md");
 

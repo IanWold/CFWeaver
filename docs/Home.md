@@ -9,6 +9,7 @@
 * [Syntax for control flow modeling](https://github.com/IanWold/CFWeaver/wiki/Control-Flow-State-Model)
     * [Parser errors](https://github.com/IanWold/CFWeaver/wiki/Parser-Errors)
     * [Modeling recipes](https://github.com/IanWold/CFWeaver/wiki/Modeling-Recipes)
+* [Using CFWeaver with AI agents](https://github.com/IanWold/CFWeaver/wiki/AI-Agents)
 * [CLI reference](https://github.com/IanWold/CFWeaver/wiki/CLI-Reference)
 
 ## Quick Start

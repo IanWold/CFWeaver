@@ -81,6 +81,8 @@ cfweaver --version
 
 `cfweaver help` prints longer guides that are built into CFWeaver, so they're available without internet access. With no topic, it lists the topics:
 
+* `agents` prints [AI Agents](https://github.com/IanWold/CFWeaver/wiki/AI-Agents), instructions for AI agents using CFWeaver.
+* `skill` prints the same instructions as a `SKILL.md` file, for agents that support [Agent Skills](https://agentskills.io). Save it as `SKILL.md` in a folder named `cfweaver` in the agent's skills folder, such as `.claude/skills/cfweaver/SKILL.md` for Claude Code.
 * `recipes` prints [Modeling Recipes](https://github.com/IanWold/CFWeaver/wiki/Modeling-Recipes).
 * `errors` prints [Parser Errors](https://github.com/IanWold/CFWeaver/wiki/Parser-Errors), which describes every error and warning.
 * An error or warning code, such as `309`, prints just that entry from Parser Errors.
