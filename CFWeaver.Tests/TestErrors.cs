@@ -318,6 +318,25 @@ public class TestErrors
     }
 
     [Fact]
+    public async Task SelfContainedRequiresHtml()
+    {
+        var result = await RunTestAsync("input.md -o output.md -f md --self-contained",
+            (
+                "input.md",
+                """
+                # Operation 1
+
+                * Step: Success => 200
+                """
+            )
+        );
+
+        Assert.Contains("Error 4: --self-contained applies only to HTML output.", result.Error);
+        Assert.Equal(1, result.ExitCode);
+        Assert.Empty(result.Files);
+    }
+
+    [Fact]
     public async Task StepOutsideOperation()
     {
         var (console, files) = await RunTestAsync("input.md -o output.html",

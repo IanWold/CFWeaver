@@ -21,6 +21,7 @@ static class Diagnostics
         internal static readonly GeneralError InputNoOperations = new(1, "Input contains no operation definitions");
         internal static readonly GeneralError FileDoesNotExist = new(2, "Specified input file does not exist");
         internal static readonly GeneralError OutputNotSpecified = new(3, "No output path given; use -o <path>, -o - for stdout, or --check to only validate the model");
+        internal static readonly GeneralError SelfContainedNotHtml = new(4, "--self-contained applies only to HTML output");
 
         internal static readonly LineError OperationNoSteps = new(101, "Operation contains no step definitions");
         internal static readonly LineError OperationNoName = new(102, "Operation has no name");

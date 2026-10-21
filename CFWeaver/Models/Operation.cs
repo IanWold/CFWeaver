@@ -80,15 +80,20 @@ public record Operation(string Name, IEnumerable<Step> Steps, string Description
         }
     }
 
+    internal IEnumerable<(Step Step, Operation Operation)> Calls(IEnumerable<Operation> operations) =>
+        Steps.SelectMany(step => operations
+            .Where(o => o.Name == step.Name && !ReferenceEquals(o, this))
+            .Take(1)
+            .Select(o => (step, o))
+        );
+
+    internal IEnumerable<Operation> CalledBy(IEnumerable<Operation> operations) =>
+        operations.Where(o => o.Calls(operations).Any(call => ReferenceEquals(call.Operation, this)));
+
     internal IEnumerable<Warning> SubOperationWarnings(IEnumerable<Operation> operations)
     {
-        foreach (var step in Steps)
+        foreach (var (step, subOperation) in Calls(operations))
         {
-            if (operations.FirstOrDefault(o => o.Name == step.Name && !ReferenceEquals(o, this)) is not Operation subOperation)
-            {
-                continue;
-            }
-
             var returns = subOperation.Scenarios.Select(s => s.Response).Distinct().ToList();
 
             foreach (var unhandled in returns.Except(step.Results.Select(r => r.Name)))
@@ -126,11 +131,43 @@ public record Operation(string Name, IEnumerable<Step> Steps, string Description
         }
     }
 
-    internal void WriteJson(Utf8JsonWriter writer)
+    IEnumerable<string> SubOperationNotes(IEnumerable<Operation> operations, Func<Operation, string> link)
+    {
+        var calls = Calls(operations).Select(call => call.Operation).ToList();
+        if (calls.Count > 0)
+        {
+            yield return $"Calls {calls.Select(link).JoinAnd()} as {(calls.Count == 1 ? "a sub-operation" : "sub-operations")}. This table shows only the value each call returns; the paths that lead to it are in that operation's own table.";
+        }
+
+        var callers = CalledBy(operations).ToList();
+        if (callers.Count > 0)
+        {
+            yield return $"Called as a sub-operation by {callers.Select(link).JoinAnd()}, whose {(callers.Count == 1 ? "table shows" : "tables show")} only the value it returns.";
+        }
+    }
+
+    internal void WriteJson(Utf8JsonWriter writer, IEnumerable<Operation> operations)
     {
         writer.WriteStartObject();
         writer.WriteString("name", Name);
         writer.WriteString("description", Description);
+
+        writer.WriteStartArray("calls");
+        foreach (var (step, operation) in Calls(operations))
+        {
+            writer.WriteStartObject();
+            writer.WriteString("step", step.Name);
+            writer.WriteString("operation", operation.Name);
+            writer.WriteEndObject();
+        }
+        writer.WriteEndArray();
+
+        writer.WriteStartArray("calledBy");
+        foreach (var caller in CalledBy(operations))
+        {
+            writer.WriteStringValue(caller.Name);
+        }
+        writer.WriteEndArray();
 
         writer.WriteStartArray("scenarios");
         foreach (var scenario in Scenarios)
@@ -187,9 +224,10 @@ public record Operation(string Name, IEnumerable<Step> Steps, string Description
     internal string NavigationHtml =>
         $"<li><a href=\"#{Anchor}\">{Name.HtmlEncode()}</a></li>";
 
-    internal void AppendHtml(StringBuilder sb) => sb
+    internal void AppendHtml(StringBuilder sb, IEnumerable<Operation> operations) => sb
         .AppendLine($"<section id=\"{Anchor}\"><header><h2>{Name.HtmlEncode()}</h2></header>")
         .Append(Description.MarkdownToHtml())
+        .AppendJoin("", SubOperationNotes(operations, o => $"<a href=\"#{o.Anchor}\">{o.Name.HtmlEncode()}</a>").Select(note => $"<p>{note}</p>"))
         .AppendLine("<div style=\"display: flex; justify-content: center; width: 100%;margin-bottom:32px;\" class=\"mermaid\">")
         .Append(MermaidHtml)
         .AppendLine("</div>")
@@ -200,10 +238,11 @@ public record Operation(string Name, IEnumerable<Step> Steps, string Description
         .Append(new StringBuilder().AppendDelegate(ResultTable.AppendCsv).ToString().HtmlEncode())
         .AppendLine("</code></pre></details></main><hr/>");
 
-    internal void AppendMarkdown(StringBuilder sb) => sb
+    internal void AppendMarkdown(StringBuilder sb, IEnumerable<Operation> operations) => sb
         .AppendLine($"# {Name}")
         .AppendLine()
         .Append(Description.Length > 0 ? $"{Description.ReplaceLineEndings()}{Environment.NewLine}{Environment.NewLine}" : "")
+        .AppendJoin("", SubOperationNotes(operations, o => $"[{o.Name}](#{o.Name.MarkdownAnchor()})").Select(note => $"{note}{Environment.NewLine}{Environment.NewLine}"))
         .AppendLine("```mermaid")
         .AppendDelegate(AppendMermaid)
         .AppendLine("```")

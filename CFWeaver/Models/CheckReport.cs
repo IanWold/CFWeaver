@@ -15,8 +15,13 @@ public record CheckReport(IEnumerable<Error> Errors, IEnumerable<Warning> Warnin
 
         return new StringBuilder()
             .AppendLine($"Model is well-formed: {Count(operations, "operation")}, {Count(scenarios, "scenario")}.")
-            .AppendJoin(Environment.NewLine, Operations.Select(o => $"  {o.Name}: {Count(o.Scenarios.Count, "scenario")}"))
+            .AppendJoin(Environment.NewLine, Operations.Select(Line))
             .ToString();
+
+        string Line(Operation operation) =>
+            operation.CalledBy(Operations).Select(o => o.Name).ToArray() is [_, ..] callers
+            ? $"  {operation.Name}: {Count(operation.Scenarios.Count, "scenario")}, called by {callers.JoinAnd()}"
+            : $"  {operation.Name}: {Count(operation.Scenarios.Count, "scenario")}";
 
         static string Count(int count, string noun) =>
             $"{count} {noun}{(count == 1 ? "" : "s")}";
@@ -37,6 +42,12 @@ public record CheckReport(IEnumerable<Error> Errors, IEnumerable<Warning> Warnin
                 writer.WriteStartObject();
                 writer.WriteString("name", operation.Name);
                 writer.WriteNumber("scenarios", operation.Scenarios.Count);
+                writer.WriteStartArray("calledBy");
+                foreach (var caller in operation.CalledBy(Operations))
+                {
+                    writer.WriteStringValue(caller.Name);
+                }
+                writer.WriteEndArray();
                 writer.WriteEndObject();
             }
             writer.WriteEndArray();

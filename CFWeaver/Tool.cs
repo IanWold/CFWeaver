@@ -72,7 +72,8 @@ static class Tool
         Sub-operations:
           A step with the same name as another operation is read as calling it, so its results should
           be that operation's return values. CFWeaver warns if the step leaves one of them out, or has
-          a result the operation never returns. Each operation keeps its own scenario table:
+          a result the operation never returns. The call isn't expanded: each operation keeps its own
+          scenario table, and the output links each operation to the ones it calls and is called by.
             # Get Item
             * Authenticate: Valid | Invalid => 401
             * Lookup: Found => 200 | NotFound => 404
@@ -81,12 +82,35 @@ static class Tool
             * CheckToken: Valid | Missing => Invalid
             * LoadUser: Found => Valid | NotFound => Invalid
 
+        Modeling tips:
+          - A step is a point where the code can go more than one way; straight-line code needs none.
+          - Loops: model one item as its own operation, and call it from the step that loops. A loop
+            that stops at the first failure has the same outcomes as a single item.
+          - Retries: model their outcomes, such as immediate success, eventual success and retries
+            exhausted, not each attempt.
+          - Exceptions: give a step that can throw one Failed result, unless the code handles
+            different exceptions differently.
+          - State from outside the request, such as an open circuit breaker or a cached item, goes in
+            the condition of the result it causes; don't model how that state came about.
+          - When several inputs can be invalid, order the steps as the code checks them; the first
+            failure wins.
+          - Framework behavior you don't model, such as routing or serialization, belongs in the
+            description as an assumption.
+          - A caller sees only a sub-operation's return value. If what happens next depends on how
+            that value arose, return a different value for each case.
+          - Conditions are descriptions: CFWeaver joins them along a path, but doesn't check that
+            they can all be true at once.
+
         Output:
           One row per path: the result taken at each step (blank where the path skipped the step), the
           returned value (Respond), the joined conditions, and one column per variable. Use -f md for a
           Markdown table, or -f json for each scenario's path, response, conditions and variables; the
           response is a number if the returned value is an integer. Use -o - to write to stdout
           instead of a file.
+
+          The HTML (the default) and Markdown outputs also draw each operation as a diagram, with its
+          return values as end states. The HTML loads its diagram library from a CDN; add
+          --self-contained to embed it instead, so the report displays offline (about 5.5 MB larger).
 
           Use --check instead of -o to only check that the model is well-formed: it prints the number
           of scenarios in each operation, or the errors and warnings, and with -f json it prints them

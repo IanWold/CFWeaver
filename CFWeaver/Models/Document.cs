@@ -6,20 +6,23 @@ namespace CFWeaver;
 
 public record Document(IEnumerable<Operation> Operations, string Description = "")
 {
-    public string Html() => new StringBuilder()
+    public string Html(bool selfContained = false) => new StringBuilder()
         .AppendLine("<!DOCTYPE html><html>")
-        .AppendLine($"<head><meta charset=\"utf-8\"><meta name=\"generator\" content=\"{Tool.Name}\"><link rel=\"stylesheet\" href=\"https://unpkg.com/mvp.css@1.18.0\"><style>th, td {{ text-align: left !important; }}</style><script src=\"https://cdn.jsdelivr.net/npm/mermaid@12.2.0/dist/mermaid.min.js\"></script></head>")
+        .Append($"<head><meta charset=\"utf-8\"><meta name=\"generator\" content=\"{Tool.Name}\">")
+        .Append($"<style>{Assets.StyleSheet}{Environment.NewLine}th, td {{ text-align: left !important; }}</style>")
+        .Append(selfContained ? $"<script>{Assets.Mermaid}</script>" : $"<script src=\"{Assets.MermaidUrl}\"></script>")
+        .AppendLine("</head>")
         .AppendLine("<body><nav style=\"justify-content:center;\"><ul>")
         .AppendJoin(Environment.NewLine, Operations.Select(o => o.NavigationHtml))
         .AppendLine("</ul></nav>")
         .Append(Description.Length > 0 ? $"<header>{Description.MarkdownToHtml()}</header>" : "")
-        .AppendDelegate(Operations.Select(o => (Action<StringBuilder>)o.AppendHtml))
+        .AppendDelegate(Operations.Select(o => (Action<StringBuilder>)(sb => o.AppendHtml(sb, Operations))))
         .AppendLine("<script>mermaid.initialize({ startOnLoad: true }); mermaid.init();</script></body></html>")
         .ToString();
 
     public string Markdown() => new StringBuilder()
         .Append(Description.Length > 0 ? $"{Description.ReplaceLineEndings()}{Environment.NewLine}{Environment.NewLine}" : "")
-        .AppendDelegate(Operations.Select(o => (Action<StringBuilder>)o.AppendMarkdown))
+        .AppendDelegate(Operations.Select(o => (Action<StringBuilder>)(sb => o.AppendMarkdown(sb, Operations))))
         .ToString();
 
     public string Json()
@@ -33,7 +36,7 @@ public record Document(IEnumerable<Operation> Operations, string Description = "
             writer.WriteStartArray("operations");
             foreach (var operation in Operations)
             {
-                operation.WriteJson(writer);
+                operation.WriteJson(writer, Operations);
             }
             writer.WriteEndArray();
             writer.WriteEndObject();

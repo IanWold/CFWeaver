@@ -23,17 +23,25 @@ public class App(string[] args, TextWriter textWriter, TextWriter errorWriter, F
         /// <param name="output">-o, The path to the output file, or - to write to stdout. Required unless --check is given.</param>
         /// <param name="format">-f, The format to output. [html|md|json]</param>
         /// <param name="check">Only check that the model is well-formed; writes no output. With -f json, reports as JSON.</param>
+        /// <param name="selfContained">Embed the diagram library in the HTML so it displays offline; adds about 5.5 MB.</param>
         [Command("")]
         public async Task<int> Compile(
             [Argument] string input,
             string? output = null,
             Format format = Format.Html,
-            bool check = false
+            bool check = false,
+            bool selfContained = false
         )
         {
             if (!check && output is null)
             {
                 terminal.Error.WriteLine(Diagnostics.Errors.OutputNotSpecified.Result().Errors.PrettyPrint());
+                return 1;
+            }
+
+            if (!check && selfContained && format != Format.Html)
+            {
+                terminal.Error.WriteLine(Diagnostics.Errors.SelfContainedNotHtml.Result().Errors.PrettyPrint());
                 return 1;
             }
 
@@ -72,7 +80,7 @@ public class App(string[] args, TextWriter textWriter, TextWriter errorWriter, F
                     var rendered = format switch {
                         Format.Md => document.Markdown(),
                         Format.Json => document.Json(),
-                        Format.Html or _ => document.Html()
+                        Format.Html or _ => document.Html(selfContained)
                     };
 
                     if (toStandardOut)

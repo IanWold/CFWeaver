@@ -12,6 +12,9 @@ public static partial class Extensions
     [GeneratedRegex("`([^`]+)`")]
     private static partial Regex InlineCode();
 
+    [GeneratedRegex(@"[^\p{L}\p{M}\p{N}\p{Pc} -]")]
+    private static partial Regex NonAnchorCharacter();
+
     internal static ParseResult<U> Coalesce<T, U>(this IEnumerable<ParseResult<T>> results, Func<IEnumerable<T>, U> coalesce)
     {
         var aggregation = results.Aggregate<ParseResult<T>, ResultAccumulator<T>>(new([],[]), (accumulator, result) => result.Map(
@@ -47,6 +50,16 @@ public static partial class Extensions
 
     internal static string MarkdownCell(this string text) =>
         text.Replace("|", "\\|");
+
+    internal static string MarkdownAnchor(this string heading) =>
+        NonAnchorCharacter().Replace(heading.Trim().ToLowerInvariant(), "").Replace(' ', '-');
+
+    internal static string JoinAnd(this IEnumerable<string> items) =>
+        items.ToArray() switch
+        {
+            [.. var rest, var last] when rest.Length > 0 => $"{string.Join(", ", rest)} and {last}",
+            var single => string.Concat(single)
+        };
 
     internal static string MarkdownToHtml(this string markdown)
     {

@@ -249,6 +249,84 @@ public class TestOutput
     }
 
     [Fact]
+    public async Task OutputsLinkSubOperationsToTheirCallers()
+    {
+        var model =
+            """
+            # Get Item
+
+            * Authenticate: Valid | Invalid => 401
+            * Lookup: Found => 200 | NotFound => 404
+
+            # Authenticate
+
+            * CheckToken: Valid | Missing => Invalid
+            * LoadUser: Found => Valid | NotFound => Invalid
+            """;
+
+        var markdown = await RunTestAsync("input.md -o - -f md", ("input.md", model));
+        var html = await RunTestAsync("input.md -o - -f html", ("input.md", model));
+        var json = await RunTestAsync("input.md -o - -f json", ("input.md", model));
+        var check = await RunTestAsync("input.md --check", ("input.md", model));
+
+        using var document = JsonDocument.Parse(json.Output);
+        var operations = document.RootElement.GetProperty("operations");
+        var call = operations[0].GetProperty("calls").EnumerateArray().Single();
+
+        Assert.Contains("Calls [Authenticate](#authenticate) as a sub-operation. This table shows only the value each call returns; the paths that lead to it are in that operation's own table.", markdown.Output);
+        Assert.Contains("Called as a sub-operation by [Get Item](#get-item), whose table shows only the value it returns.", markdown.Output);
+        Assert.Contains("<p>Calls <a href=\"#Authenticate\">Authenticate</a> as a sub-operation.", html.Output);
+        Assert.Contains("<p>Called as a sub-operation by <a href=\"#Get-Item\">Get Item</a>,", html.Output);
+        Assert.Equal("Authenticate", call.GetProperty("step").GetString());
+        Assert.Equal("Authenticate", call.GetProperty("operation").GetString());
+        Assert.Empty(operations[0].GetProperty("calledBy").EnumerateArray());
+        Assert.Equal(["Get Item"], operations[1].GetProperty("calledBy").EnumerateArray().Select(c => c.GetString()));
+        Assert.Contains("  Authenticate: 3 scenarios, called by Get Item", check.Output);
+    }
+
+    [Fact]
+    public async Task HtmlInlinesStyleSheetAndLoadsDiagramsFromCdn()
+    {
+        var result = await RunTestAsync("input.md -o - -f html",
+            (
+                "input.md",
+                """
+                # Operation 1
+
+                * Step: Success => 200 | Failure => 400
+                """
+            )
+        );
+
+        Assert.Contains("/* MVP.css v1.18", result.Output);
+        Assert.Contains("Copyright (c) 2025 Andy Brewer", result.Output);
+        Assert.Contains("<script src=\"https://cdn.jsdelivr.net/npm/mermaid@12.2.0/dist/mermaid.min.js\"></script>", result.Output);
+        Assert.DoesNotContain("unpkg.com", result.Output);
+    }
+
+    [Fact]
+    public async Task SelfContainedHtmlEmbedsDiagramLibrary()
+    {
+        var result = await RunTestAsync("input.md -o - --self-contained",
+            (
+                "input.md",
+                """
+                # Operation 1
+
+                * Step: Success => 200 | Failure => 400
+                """
+            )
+        );
+
+        Assert.DoesNotContain("https://cdn.jsdelivr.net", result.Output);
+        Assert.Contains("Copyright (c) 2014 - 2022 Knut Sveidqvist", result.Output);
+        Assert.True(result.Output.Length > 5_000_000);
+        Assert.Equal(2, result.Output.Split("<script", StringSplitOptions.None).Length - 1);
+        Assert.Equal(2, result.Output.Split("</script", StringSplitOptions.None).Length - 1);
+        Assert.Equal(0, result.ExitCode);
+    }
+
+    [Fact]
     public async Task CheckSummarizesValidModelWithoutWritingOutput()
     {
         var result = await RunTestAsync("input.md --check",
