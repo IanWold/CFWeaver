@@ -86,7 +86,7 @@ static class Tool
             * CheckToken: Valid | Missing => Invalid
             * LoadUser: Found => Valid | NotFound => Invalid
 
-        Modeling tips:
+        Modeling tips (cfweaver help recipes has examples):
           - A step is a point where the code can go more than one way; straight-line code needs none.
           - Loops: model one item as its own operation, and call it from the step that loops. A loop
             that stops at the first failure has the same outcomes as a single item.
@@ -123,7 +123,8 @@ static class Tool
 
           If the model has errors, they're written to stderr with a code and line number, no output
           is written, and cfweaver exits with code 1. Warnings, such as a step that no path reaches,
-          are also written to stderr but don't stop the output.
+          are also written to stderr but don't stop the output. cfweaver help <code> explains any
+          error or warning, with examples.
 
         Example:
           model.md:
@@ -134,10 +135,51 @@ static class Tool
 
         {Indent(ExampleTable, 4)}
 
+        {Topics}
+
         Full documentation: https://github.com/IanWold/CFWeaver/wiki
         """
         .ReplaceLineEndings();
         
+    const string Topics =
+        """
+        More help, built in:
+          cfweaver help recipes     How to model loops, retries, exceptions and other common patterns.
+          cfweaver help errors      Every error and warning, with examples.
+          cfweaver help <code>      One error or warning, such as cfweaver help 309.
+        """;
+
+    internal static string? Topic(string? topic) => topic switch
+    {
+        null => Topics.ReplaceLineEndings(),
+        "recipes" => Assets.ModelingRecipes.ReplaceLineEndings(),
+        "errors" => Assets.ParserErrors.ReplaceLineEndings(),
+        _ when topic.All(char.IsAsciiDigit) => ErrorEntry(topic),
+        _ => null
+    };
+
+    static string? ErrorEntry(string code)
+    {
+        var lines = Assets.ParserErrors.ReplaceLineEndings("\n").Split('\n');
+        var start = Array.FindIndex(lines, l => l.StartsWith($"## `{code}`"));
+
+        if (start < 0)
+        {
+            return null;
+        }
+
+        var end = start + 1;
+        for (var inCodeBlock = false; end < lines.Length && (inCodeBlock || !lines[end].StartsWith('#')); end++)
+        {
+            if (lines[end].StartsWith("```"))
+            {
+                inCodeBlock = !inCodeBlock;
+            }
+        }
+
+        return string.Join(Environment.NewLine, lines[start..end]).Trim();
+    }
+
     internal static string Version { get; } =
         (typeof(Tool).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "1.0.0").Split('+')[0];
 

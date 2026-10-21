@@ -16,6 +16,12 @@ static class Assets
     internal static string StyleSheet =>
         WithLicense($"mvp-{StyleSheetVersion}.LICENSE", Read($"mvp-{StyleSheetVersion}.css"));
 
+    internal static string ModelingRecipes =>
+        Read("Modeling-Recipes.md");
+
+    internal static string ParserErrors =>
+        Read("Parser-Errors.md");
+
     static string WithLicense(string license, string content) =>
         $"/*!{Environment.NewLine}{Read(license)}*/{Environment.NewLine}{content}";
 

@@ -137,6 +137,23 @@ public class App(string[] args, TextWriter textWriter, TextWriter errorWriter, F
                 return report.IsWellFormed ? 0 : 1;
             }
         }
+
+        /// <summary>
+        /// Prints a built-in guide: modeling recipes, every error and warning, or a single one.
+        /// </summary>
+        /// <param name="topic">recipes, errors, or an error or warning code such as 309.</param>
+        [Command("help")]
+        public int Help([Argument] string? topic = null)
+        {
+            if (Tool.Topic(topic) is not string text)
+            {
+                terminal.Error.WriteLine(Diagnostics.Errors.HelpTopicNotFound.Result().Errors.PrettyPrint());
+                return 1;
+            }
+
+            terminal.Out.WriteLine(text);
+            return 0;
+        }
     }
 
     public async Task RunAsync()

@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Assets\*" LogicalName="%(Filename)%(Extension)" />
+    <EmbeddedResource Include="..\docs\Modeling-Recipes.md;..\docs\Parser-Errors.md" LogicalName="%(Filename)%(Extension)" />
   </ItemGroup>
 
 </Project>

@@ -1,0 +1,50 @@
+name: Publish wiki
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/**'
+      - '.github/workflows/wiki.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: wiki
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Check out wiki
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}.wiki
+          path: wiki
+
+      - name: Copy docs to wiki
+        run: |
+          find wiki -maxdepth 1 -name '*.md' -delete
+          cp docs/*.md wiki/
+
+      - name: Commit and push
+        working-directory: wiki
+        env:
+          SHA: ${{ github.sha }}
+        run: |
+          git add --all
+          if git diff --cached --quiet; then
+            echo "The wiki is already up to date."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Update from ${SHA}"
+          git push
