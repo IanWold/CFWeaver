@@ -15,7 +15,7 @@ public class TestOutput
                 """
                 # Operation 1
 
-                * Step: Success = 200 | Failure = 400
+                * Step: Success => 200 | Failure => 400
                 """
             )
         );
@@ -36,7 +36,7 @@ public class TestOutput
                 """
                 # Operation 1
 
-                * Step: Success = 200 | Failure = 400
+                * Step: Success => 200 | Failure => 400
                 """
             )
         );
@@ -55,7 +55,7 @@ public class TestOutput
                 """
                 ## Handle C# requests
 
-                * Step: Success = 200
+                * Step: Success => 200
                 """
             )
         );
@@ -72,7 +72,7 @@ public class TestOutput
                 """
                 # Operation 1
 
-                * Step: Success = 200 | Failure = 400
+                * Step: Success => 200 | Failure => 400
                 """
             )
         );
@@ -92,8 +92,8 @@ public class TestOutput
                 """
                 # Get an Item
 
-                * Authenticate: Success | Failure = 403 ? the caller is not authenticated
-                * GetFromDatabase: Found = 200 ? the item exists & Cached=no | Not found = 404 ? the item doesn't exist
+                * Authenticate: Success | Failure => 403 ? the caller is not authenticated
+                * GetFromDatabase: Found => 200 ? the item exists & Cached=no | Not found => 404 ? the item doesn't exist
                 """
             )
         );
@@ -126,17 +126,44 @@ public class TestOutput
                 """
                 # Operation 1
 
-                * First: Done = 200 | Skip = Third
-                * Second: Done = 201
-                * Third: Done = 202
+                * First: Done => 200 | Skip = Third
+                * Second: Done => 201
+                * Third: Done => 202
                 """
             )
         );
 
-        Assert.Contains("Warning 1001 (line 4 \"* Second: Done = 201\"): No path reaches this step.", result.Error);
+        Assert.Contains("Warning 1001 (line 4 \"* Second: Done => 201\"): No path reaches this step.", result.Error);
         Assert.DoesNotContain("Third", result.Error);
         Assert.Equal(0, result.ExitCode);
         Assert.Contains("output.md", result.Files.Keys);
+    }
+
+    [Fact]
+    public async Task WarnsAboutReturningAStepName()
+    {
+        var result = await RunTestAsync("input.md -o output.md -f md",
+            (
+                "input.md",
+                """
+                # Operation 1
+
+                * First: Done => 200 | Skip => Third
+                    - Next
+                * Second: Done => 201
+                * Third: Done => 202
+                """
+            )
+        );
+
+        Assert.Equal(
+            [
+                "Warning 1002 (line 3 \"Skip => Third\"): Result returns the name of a step; use `=` to go to that step.",
+                "Warning 1001 (line 6 \"* Third: Done => 202\"): No path reaches this step.",
+            ],
+            result.Error.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        );
+        Assert.Equal(0, result.ExitCode);
     }
 
     [Fact]
@@ -148,9 +175,9 @@ public class TestOutput
                 """
                 # Operation 1
 
-                * First: Done = 200 | Skip = Third
-                * Second: Done = 201
-                * Third: Done = 202 | Failure = 500
+                * First: Done => 200 | Skip = Third
+                * Second: Done => 201
+                * Third: Done => 202 | Failure => 500
                 """
             )
         );
@@ -163,7 +190,7 @@ public class TestOutput
             result.Output.Trim(),
             ignoreLineEndingDifferences: true
         );
-        Assert.Contains("Warning 1001 (line 4 \"* Second: Done = 201\"): No path reaches this step.", result.Error);
+        Assert.Contains("Warning 1001 (line 4 \"* Second: Done => 201\"): No path reaches this step.", result.Error);
         Assert.Equal(0, result.ExitCode);
         Assert.Empty(result.Files);
     }
@@ -177,7 +204,7 @@ public class TestOutput
                 """
                 # Operation 1
 
-                * Step: Success = Missing | Failure = 400
+                * Step: Success = Missing | Failure => 400
                 """
             )
         );
@@ -197,7 +224,7 @@ public class TestOutput
                 """
                 # Operation 1
 
-                * Step: Success = 200 | Failure = 400
+                * Step: Success => 200 | Failure => 400
                 """
             )
         );
@@ -216,9 +243,9 @@ public class TestOutput
                 """
                 # Operation 1
 
-                * First: Done = 200 | Skip = Third
-                * Second: Done = 201
-                * Third: Done = 202 | Failure = 500
+                * First: Done => 200 | Skip = Third
+                * Second: Done => 201
+                * Third: Done => 202 | Failure => 500
                 """
             )
         );
@@ -233,7 +260,7 @@ public class TestOutput
         Assert.Equal("warning", diagnostic.GetProperty("severity").GetString());
         Assert.Equal(1001, diagnostic.GetProperty("code").GetInt32());
         Assert.Equal(4, diagnostic.GetProperty("line").GetInt32());
-        Assert.Equal("* Second: Done = 201", diagnostic.GetProperty("text").GetString());
+        Assert.Equal("* Second: Done => 201", diagnostic.GetProperty("text").GetString());
         Assert.Empty(result.Error);
         Assert.Equal(0, result.ExitCode);
     }
@@ -247,7 +274,7 @@ public class TestOutput
                 """
                 # Operation 1
 
-                * Step: Success = Missing | Failure = 400
+                * Step: Success = Missing | Failure => 400
                 """
             )
         );
@@ -273,9 +300,9 @@ public class TestOutput
                 """
                 # Operation 1
 
-                * Authenticate: Success | Failure = 403
-                * Lookup: Found | Cached | NotFound = 404 | Gone = 404
-                * Finish: OK = 200
+                * Authenticate: Success | Failure => 403
+                * Lookup: Found | Cached | NotFound => 404 | Gone => 404
+                * Finish: OK => 200
                 """
             )
         );
@@ -305,6 +332,32 @@ public class TestOutput
     }
 
     [Fact]
+    public async Task TextReturnValuesAreStringsInJsonAndStatesInDiagrams()
+    {
+        var model =
+            """
+            # Operation 1
+
+            * Validate: Valid | Invalid => throws "ArgumentException" | Negative => -1
+            * Save: Saved => 201 | Saved2 => 201 | Conflict => 409 Conflict
+            """;
+
+        var json = await RunTestAsync("input.md -o - -f json", ("input.md", model));
+        var markdown = await RunTestAsync("input.md -o - -f md", ("input.md", model));
+
+        using var document = JsonDocument.Parse(json.Output);
+        var responses = document.RootElement.GetProperty("operations")[0].GetProperty("scenarios").EnumerateArray()
+            .Select(s => s.GetProperty("response"))
+            .Select(r => r.ValueKind == JsonValueKind.Number ? $"number {r.GetInt32()}" : $"string {r.GetString()}");
+
+        Assert.Equal(["number 201", "number 201", "string 409 Conflict", "string throws \"ArgumentException\"", "number -1"], responses);
+        Assert.Contains("state \"throws #quot;ArgumentException#quot;\" as Respondthrows__ArgumentException_", markdown.Output);
+        Assert.Contains("state \"-1\" as Respond_1", markdown.Output);
+        Assert.Contains("Save --> Respond409_Conflict: Conflict", markdown.Output);
+        Assert.Contains("Save --> Respond201: Saved, Saved2", markdown.Output);
+    }
+
+    [Fact]
     public async Task CsvQuotesFieldsAndClosesItsFence()
     {
         var (_, files) = await RunTestAsync("input.md -o output.md -f md",
@@ -313,7 +366,7 @@ public class TestOutput
                 """
                 # Operation 1
 
-                * Step: Low = 400 ? limit is below 1, or "missing" | Ok = 200
+                * Step: Low => 400 ? limit is below 1, or "missing" | Ok => 200
                 """
             )
         );
@@ -341,7 +394,7 @@ public class TestOutput
                 """
                 # Get an <Item>
 
-                * Step: Low = 400 ? limit < 1 | Ok = 200
+                * Step: Low => 400 ? limit < 1 | Ok => 200
                 """
             )
         );
@@ -367,7 +420,7 @@ public class TestOutput
 
             Assumes the host started.
 
-            * Step: Success = 200 | Failure = 500
+            * Step: Success => 200 | Failure => 500
             """;
 
         var json = await RunTestAsync("input.md -o - -f json", ("input.md", model));

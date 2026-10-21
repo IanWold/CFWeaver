@@ -1,8 +1,9 @@
+using System.Globalization;
 using System.Text.Json;
 
 namespace CFWeaver;
 
-public record Scenario(IReadOnlyList<Scenario.Choice> Path, int Response, IReadOnlyList<string> Conditions, Dictionary<string, string> Variables)
+public record Scenario(IReadOnlyList<Scenario.Choice> Path, string Response, IReadOnlyList<string> Conditions, Dictionary<string, string> Variables)
 {
     public record Choice(string Step, string Result);
 
@@ -20,7 +21,15 @@ public record Scenario(IReadOnlyList<Scenario.Choice> Path, int Response, IReadO
         }
         writer.WriteEndArray();
 
-        writer.WriteNumber("response", Response);
+        if (long.TryParse(Response, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var number)
+            && number.ToString(CultureInfo.InvariantCulture) == Response)
+        {
+            writer.WriteNumber("response", number);
+        }
+        else
+        {
+            writer.WriteString("response", Response);
+        }
 
         writer.WriteStartArray("conditions");
         foreach (var condition in Conditions)

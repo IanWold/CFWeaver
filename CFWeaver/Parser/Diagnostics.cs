@@ -33,10 +33,10 @@ static class Diagnostics
         internal static readonly LineError ResultNoName = new(301, "Result has no name");
         internal static readonly LineError ResultNoReturnOrGoto = new(302, "No return or goto value given for result");
         internal static readonly LineError ResultDuplicateVariables = new(303, "Result must not contain variables with duplicate names");
-        internal static readonly LineError ResultGotoUnknownStep = new(304, "Result goes to a step that does not exist");
+        internal static readonly LineError ResultGotoUnknownStep = new(304, "Result goes to a step that does not exist; use `=>` to return a value");
         internal static readonly LineError ResultGotoEarlierStep = new(305, "Result must go to a later step");
-        internal static readonly LineError ResultFinalStepNoReturn = new(306, "Result on the final step must have a return value");
-        internal static readonly LineError ResultValueNotSingleWord = new(307, "Return or goto value must be a number or a single step name; variables go after `?`");
+        internal static readonly LineError ResultFinalStepNoReturn = new(306, "Result on the final step must return a value with `=>`");
+        internal static readonly LineError ResultValueNotSingleWord = new(307, "A goto must be a single step name, and a return value can't contain `&` or `=`; variables go after `?`");
         internal static readonly LineError ResultMultipleConditions = new(308, "Result has more than one condition; `&` separates variables, so it can't appear in a condition");
     }
 
@@ -49,5 +49,6 @@ static class Diagnostics
         }
 
         internal static readonly LineWarning StepUnreachable = new(1001, "No path reaches this step");
+        internal static readonly LineWarning ReturnNamesStep = new(1002, "Result returns the name of a step; use `=` to go to that step");
     }
 }

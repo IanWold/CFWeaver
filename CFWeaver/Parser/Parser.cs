@@ -6,7 +6,7 @@ file record OperationAst(string Name, string Description, IEnumerable<StepAst> S
 
 file record StepAst(string Name, IEnumerable<ResultAst> Results, Line Line);
 
-file record ResultAst(string Name, IEnumerable<VariableAst> Variables, Line Line, string? Goto = null, int? Response = null);
+file record ResultAst(string Name, IEnumerable<VariableAst> Variables, Line Line, string? Goto = null, string? Response = null);
 
 file record VariableAst(string Name, string Value);
 
@@ -97,9 +97,9 @@ public static class Parser
             {
                 var variables = result.Variables.ToDictionary(v => v.Name, v => v.Value);
 
-                if (result.Response is int response)
+                if (result.Response is string response)
                 {
-                    return new RespondResult(result.Name, variables, response);
+                    return new RespondResult(result.Name, variables, result.Line, response);
                 }
 
                 var target = result.Goto is string name
@@ -119,7 +119,7 @@ public static class Parser
                     return Diagnostics.Errors.ResultFinalStepNoReturn.Result(result.Line);
                 }
 
-                return new GotoResult(result.Name, variables, steps[target].Name);
+                return new GotoResult(result.Name, variables, result.Line, steps[target].Name);
             }
         }
 
@@ -236,22 +236,22 @@ public static class Parser
             {
                 return new ResultAst(name, variables, line);
             }
-            else if (split.Last().Trim() is not string last || string.IsNullOrEmpty(last))
+
+            var isReturn = split.Last().StartsWith('>');
+            var value = (isReturn ? split.Last()[1..] : split.Last()).Trim();
+
+            if (string.IsNullOrEmpty(value))
             {
                 return Diagnostics.Errors.ResultNoReturnOrGoto.Result(line);
             }
-            else if (int.TryParse(last, out var response))
-            {
-                return new ResultAst(name, variables, line, Response: response);
-            }
-            else if (last.Any(c => char.IsWhiteSpace(c) || c is '&' or '='))
+            else if (value.Any(c => c is '&' or '=' || (!isReturn && char.IsWhiteSpace(c))))
             {
                 return Diagnostics.Errors.ResultValueNotSingleWord.Result(line);
             }
-            else
-            {
-                return new ResultAst(name, variables, line, Goto: last);
-            }
+
+            return isReturn
+                ? new ResultAst(name, variables, line, Response: value)
+                : new ResultAst(name, variables, line, Goto: value);
 
             static bool IsVariableName(string name) =>
                 name.Length > 0 && name.All(c => char.IsLetterOrDigit(c) || c is '_' or '-' or '.');

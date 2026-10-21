@@ -5,9 +5,6 @@ namespace CFWeaver;
 
 public record Operation(string Name, IEnumerable<Step> Steps, string Description = "")
 {
-    internal static string RespondState(int response) =>
-        response < 0 ? $"RespondMinus{-(long)response}" : $"Respond{response}";
-
     internal IReadOnlyList<Scenario> Scenarios
     {
         get
@@ -61,7 +58,14 @@ public record Operation(string Name, IEnumerable<Step> Steps, string Description
 
             return Steps
                 .Where(s => !reached.Contains(s.Name))
-                .Select(s => Diagnostics.Warnings.StepUnreachable.Warning(s.Line));
+                .Select(s => Diagnostics.Warnings.StepUnreachable.Warning(s.Line))
+                .Concat(Steps
+                    .SelectMany(s => s.Results)
+                    .OfType<RespondResult>()
+                    .Where(r => steps.ContainsKey(r.Response))
+                    .Select(r => Diagnostics.Warnings.ReturnNamesStep.Warning(r.Line))
+                )
+                .OrderBy(w => w.Line.Number);
 
             void Reach(Step step)
             {
@@ -90,7 +94,7 @@ public record Operation(string Name, IEnumerable<Step> Steps, string Description
             return field = new Table(
                 [..Scenarios.Select(scenario => new TableRow([
                     ..Steps.Select(step => scenario.Path.FirstOrDefault(c => c.Step == step.Name)?.Result ?? string.Empty),
-                    scenario.Response.ToString(),
+                    scenario.Response,
                     string.Join(" and ", scenario.Conditions),
                     ..variableNames.Select(v => scenario.Variables.GetValueOrDefault(v, string.Empty))
                 ]))],
@@ -115,18 +119,41 @@ public record Operation(string Name, IEnumerable<Step> Steps, string Description
         writer.WriteEndObject();
     }
 
-    internal void AppendMermaid(StringBuilder sb)
+    Dictionary<string, string> ResponseStates
     {
-        var responses = Steps.SelectMany(s => s.Results).OfType<RespondResult>().Select(r => r.Response).Distinct().ToList();
+        get
+        {
+            if (field is Dictionary<string, string> fieldStates)
+            {
+                return fieldStates;
+            }
 
-        sb
-            .AppendLine("stateDiagram-v2")
-            .AppendLine("direction LR")
-            .AppendDelegate(responses.Select(r => (Action<StringBuilder>)(sb => sb.AppendLine($"state \"{r}\" as {RespondState(r)}"))))
-            .AppendLine($"[*] --> {Steps.First().Name}")
-            .AppendDelegate(Steps.Select(s => (Action<StringBuilder>)s.AppendMermaid))
-            .AppendDelegate(responses.Select(r => (Action<StringBuilder>)(sb => sb.AppendLine($"{RespondState(r)} --> [*]"))));
+            HashSet<string> states = [..Steps.Select(s => s.Name)];
+
+            return field = Steps
+                .SelectMany(s => s.Results)
+                .OfType<RespondResult>()
+                .Select(r => r.Response)
+                .Distinct()
+                .ToDictionary(
+                    r => r,
+                    r => State($"Respond{string.Concat(r.Select(c => char.IsAsciiLetterOrDigit(c) ? c : '_'))}")
+                );
+
+            string State(string state) =>
+                states.Add(state)
+                ? state
+                : State($"{state}_");
+        }
     }
+
+    internal void AppendMermaid(StringBuilder sb) => sb
+        .AppendLine("stateDiagram-v2")
+        .AppendLine("direction LR")
+        .AppendDelegate(ResponseStates.Select(r => (Action<StringBuilder>)(sb => sb.AppendLine($"state \"{r.Key.Replace("\"", "#quot;")}\" as {r.Value}"))))
+        .AppendLine($"[*] --> {Steps.First().Name}")
+        .AppendDelegate(Steps.Select(s => (Action<StringBuilder>)(sb => s.AppendMermaid(sb, ResponseStates))))
+        .AppendDelegate(ResponseStates.Values.Select(state => (Action<StringBuilder>)(sb => sb.AppendLine($"{state} --> [*]"))));
 
     string MermaidHtml =>
         new StringBuilder().AppendDelegate(AppendMermaid).ToString().HtmlEncode();

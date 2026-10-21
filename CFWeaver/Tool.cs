@@ -8,10 +8,10 @@ static class Tool
         """
         # Get an Item
 
-        * Authenticate: Success | Failure = 403 ? the caller is not authenticated
-        * Validate: Success | Failure = 400 ? the request is invalid
-        * GetFromDatabase: Found ? the item exists | Not found = 404 ? the item does not exist
-        * Authorize: Success = 200 | Failure = 401 ? the caller can't access the item & Audited=yes
+        * Authenticate: Success | Failure => 403 ? the caller is not authenticated
+        * Validate: Success | Failure => 400 ? the request is invalid
+        * GetFromDatabase: Found ? the item exists | Not found => 404 ? the item does not exist
+        * Authorize: Success => 200 | Failure => 401 ? the caller can't access the item & Audited=yes
         """;
 
     public const string ExampleTable =
@@ -38,19 +38,20 @@ static class Tool
                                   run. Step names can't contain spaces and must be unique in the operation.
           * Step                  Results can also be listed below a step, one per - line, instead of
               - Result            after a colon.
-              - Result = 404
+              - Result => 404
 
         Results:
           What a result does next depends on what follows its name:
-            Success               No "=": continue to the next step.
-            Failure = 404         "= <integer>": the operation returns this value.
+            Success               Nothing: continue to the next step.
+            Failure => 404        "=> <value>": the operation returns this value, which can be any text,
+                                  such as 404 or throws NotFoundException.
             Found = UpdateItem    "= <step name>": go to that step. It must come later in the operation;
                                   loops aren't supported.
-          Every result on the last step must return a value.
+          Every result on the last step must return a value with "=>".
 
         Conditions and variables:
           After a result's name and value, "?" starts its details, which are separated by "&":
-            Failure = 403 ? the caller is not authenticated & Audited=yes
+            Failure => 403 ? the caller is not authenticated & Audited=yes
             Success ? Audited=no
           A detail written name=value, where the name is one word (letters, digits, _, - or .), sets a
           variable. Any other detail is the result's condition, and a result has at most one. Conditions
@@ -58,8 +59,9 @@ static class Tool
 
         Reserved characters:
           "|" separates results and "&" separates details, so neither can appear in a result name,
-          condition or value. A result name can't contain "=" or "?"; after the "?", they're ordinary
-          text. Other punctuation, such as commas, quotes and "<", is fine anywhere: the outputs escape it.
+          condition or value. A result name or value can't contain "=" or "?"; after the "?", they're
+          ordinary text. Other punctuation, such as commas, quotes and "<", is fine anywhere: the
+          outputs escape it.
 
         Descriptions:
           Text and - lists between an operation's heading and its first step describe the operation,
@@ -70,8 +72,9 @@ static class Tool
         Output:
           One row per path: the result taken at each step (blank where the path skipped the step), the
           returned value (Respond), the joined conditions, and one column per variable. Use -f md for a
-          Markdown table, or -f json for each scenario's path, response, conditions and variables.
-          Use -o - to write to stdout instead of a file.
+          Markdown table, or -f json for each scenario's path, response, conditions and variables; the
+          response is a number if the returned value is an integer. Use -o - to write to stdout
+          instead of a file.
 
           Use --check instead of -o to only check that the model is well-formed: it prints the number
           of scenarios in each operation, or the errors and warnings, and with -f json it prints them

@@ -35,10 +35,10 @@ CFWeaver's input model explicitly defines each of the steps in the control flow 
 ```
 # Get an Item
 
-* Authenticate: Success | Failure = 403 ? I am not authenticated to access items
-* Validate: Success | Failure = 400 ? the request is invalid
-* GetFromDatabase: Found ? the item exists | Not found = 404 ? the item does not exist | Error = 500 ? The items table errors on select
-* Authorize: Success = 200 | Failure = 401 ? I am not authorized to access the specific item
+* Authenticate: Success | Failure => 403 ? I am not authenticated to access items
+* Validate: Success | Failure => 400 ? the request is invalid
+* GetFromDatabase: Found ? the item exists | Not found => 404 ? the item does not exist | Error => 500 ? The items table errors on select
+* Authorize: Success => 200 | Failure => 401 ? I am not authorized to access the specific item
 ```
 
 The [control flow state model documentation](https://github.com/IanWold/CFWeaver/wiki/Control-Flow-State-Model) explains the full syntax for the model.

@@ -163,8 +163,8 @@ public class TestErrors
                 """
                 # Operation 1
 
-                * Step: Success | Failure = 400
-                * Step: Success = 200
+                * Step: Success | Failure => 400
+                * Step: Success => 200
                 """
             )
         );
@@ -203,7 +203,7 @@ public class TestErrors
                 """
                 # Operation 1
 
-                * Step: Success = Missing | Failure = 400
+                * Step: Success = Missing | Failure => 400
                 """
             )
         );
@@ -211,6 +211,24 @@ public class TestErrors
         Assert.Contains("304", console);
         Assert.Contains("Result goes to a step that does not exist", console);
         Assert.Empty(files);
+    }
+
+    [Fact]
+    public async Task EqualsGoesToAStepRatherThanReturning()
+    {
+        var result = await RunTestAsync("input.md -o output.html",
+            (
+                "input.md",
+                """
+                # Operation 1
+
+                * Step: Success => 200 | Failure = 400
+                """
+            )
+        );
+
+        Assert.Contains("Error 304 (line 3 \"Failure = 400\"): Result goes to a step that does not exist; use `=>` to return a value.", result.Error);
+        Assert.Empty(result.Files);
     }
 
     [Fact]
@@ -222,8 +240,8 @@ public class TestErrors
                 """
                 # Operation 1
 
-                * First: Success | Failure = 400
-                * Second: Retry = First | Success = 200
+                * First: Success | Failure => 400
+                * Second: Retry = First | Success => 200
                 """
             )
         );
@@ -242,13 +260,13 @@ public class TestErrors
                 """
                 # Operation 1
 
-                * Step: Success | Failure = 400
+                * Step: Success | Failure => 400
                 """
             )
         );
 
         Assert.Contains("306", console);
-        Assert.Contains("Result on the final step must have a return value", console);
+        Assert.Contains("Result on the final step must return a value with `=>`", console);
         Assert.Empty(files);
     }
 
@@ -261,7 +279,7 @@ public class TestErrors
                 """
                 # Operation 1
 
-                * Step: Success = Missing | Failure = 400
+                * Step: Success = Missing | Failure => 400
                 """
             )
         );
@@ -289,7 +307,7 @@ public class TestErrors
                 """
                 # Operation 1
 
-                * Step: Success = 200
+                * Step: Success => 200
                 """
             )
         );
@@ -306,11 +324,11 @@ public class TestErrors
             (
                 "input.md",
                 """
-                * Step: Success = 200
+                * Step: Success => 200
 
                 # Operation 1
 
-                * Step: Success = 200
+                * Step: Success => 200
                 """
             )
         );
@@ -329,7 +347,7 @@ public class TestErrors
                 """
                 # Operation 1
 
-                * Step: Success = Missing | Failure = 400
+                * Step: Success = Missing | Failure => 400
                 """
             )
         );
@@ -348,13 +366,13 @@ public class TestErrors
                 """
                 # Operation 1
 
-                * Step: Success = 200 & Flag=yes
+                * Step: Success => 200 & Flag=yes
                 """
             )
         );
 
         Assert.Contains("307", console);
-        Assert.Contains("Return or goto value must be a number or a single step name; variables go after `?`", console);
+        Assert.Contains("A goto must be a single step name, and a return value can't contain `&` or `=`; variables go after `?`", console);
         Assert.Empty(files);
     }
 
@@ -367,7 +385,7 @@ public class TestErrors
                 """
                 # Operation 1
 
-                * Step: Failure = 400 ? sort & order are both missing | Success = 200
+                * Step: Failure => 400 ? sort & order are both missing | Success => 200
                 """
             )
         );

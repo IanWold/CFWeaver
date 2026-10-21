@@ -16,10 +16,10 @@ public class TestGeneration
                 """
                 # Get an Item
 
-                * Authenticate: Success | Failure = 403 ? I am not authenticated to access items
-                * Validate: Success | Failure = 400 ? the request is invalid
-                * GetFromDatabase: Found ? the item exists | Not found = 404 ? the item does not exist | Error = 500 ? The items table errors on select
-                * Authorize: Success = 200 | Failure = 401 ? I am not authorized to access the specific item
+                * Authenticate: Success | Failure => 403 ? I am not authenticated to access items
+                * Validate: Success | Failure => 400 ? the request is invalid
+                * GetFromDatabase: Found ? the item exists | Not found => 404 ? the item does not exist | Error => 500 ? The items table errors on select
+                * Authorize: Success => 200 | Failure => 401 ? I am not authorized to access the specific item
                 """
             )
         );
@@ -49,8 +49,8 @@ public class TestGeneration
                 """
                 # Operation 1
 
-                * First: Done = 200 | Next
-                * Second: Done = 201
+                * First: Done => 200 | Next
+                * Second: Done => 201
                 """
             )
         );
@@ -77,8 +77,8 @@ public class TestGeneration
                 # Operation 1
 
                 * First: Skip = Third | Next
-                * Second: Done = 200
-                * Third: Done = 201
+                * Second: Done => 200
+                * Third: Done => 201
                 """
             )
         );
@@ -104,9 +104,9 @@ public class TestGeneration
                 """
                 # Operation 1
 
-                * First: Success ? first holds | Failure = 400 ? first fails
+                * First: Success ? first holds | Failure => 400 ? first fails
                 * Second: Success ? second holds
-                * Third: Done = 200 ? third holds
+                * Third: Done => 200 ? third holds
                 """
             )
         );
@@ -133,7 +133,7 @@ public class TestGeneration
                 # Operation 1
 
                 * First: Fast ? Mode=fast | Slow ? Mode=slow
-                * Second: Reset = 200 ? Mode=none | Keep = 201
+                * Second: Reset => 200 ? Mode=none | Keep => 201
                 """
             )
         );
@@ -167,8 +167,8 @@ public class TestGeneration
 
                 - `itemId`: int > 0
 
-                * Authenticate: Success | Failure = 403
-                * GetFromDatabase: Found = 200 | NotFound = 404
+                * Authenticate: Success | Failure => 403
+                * GetFromDatabase: Found => 200 | NotFound => 404
                 """
             )
         );
@@ -197,8 +197,8 @@ public class TestGeneration
 
                 * First
                     - Valid ? the request is well-formed
-                    - Invalid = 400 ? the request is ill-formed
-                * Second: Done = 200
+                    - Invalid => 400 ? the request is ill-formed
+                * Second: Done => 200
                 """
             )
         );
@@ -224,8 +224,8 @@ public class TestGeneration
                 """
                 # Operation 1
 
-                * First: Success ? DidError = no | Failure = 500 ? DidError=yes
-                * Second: Done = 200
+                * First: Success ? DidError = no | Failure => 500 ? DidError=yes
+                * Second: Done => 200
                 """
             )
         );
@@ -251,8 +251,8 @@ public class TestGeneration
                 """
                 # Operation 1
 
-                * First: Late = 409 ? the time is after 10:30 & Query = page=2 | OnTime ? is the store open? yes
-                * Second: Done = 200
+                * First: Late => 409 ? the time is after 10:30 & Query = page=2 | OnTime ? is the store open? yes
+                * Second: Done => 200
                 """
             )
         );
@@ -278,7 +278,7 @@ public class TestGeneration
                 """
                 # Operation 1
 
-                * Sum: Over = 400 ? limit + offset = 10000 | Fine = 200 ? Condition = the sum is lower & DidError = no
+                * Sum: Over => 400 ? limit + offset = 10000 | Fine => 200 ? Condition = the sum is lower & DidError = no
                 """
             )
         );
@@ -304,7 +304,7 @@ public class TestGeneration
                 """
                 # Operation 1
 
-                * End: OK = 200 ? Flag=yes
+                * End: OK => 200 ? Flag=yes
                 """
             )
         );
@@ -314,6 +314,34 @@ public class TestGeneration
             |End|Respond|Condition|Flag|
             |---|---|---|---|
             |OK|200||yes|
+            """,
+            ExtractTable(files),
+            ignoreLineEndingDifferences: true
+        );
+    }
+
+    [Fact]
+    public async Task ReturnValuesCanBeText()
+    {
+        var (_, files) = await RunTestAsync("input.md -o output.md -f md",
+            (
+                "input.md",
+                """
+                # Operation 1
+
+                * Validate: Valid | Invalid => throws ArgumentException ? the id is empty
+                * Save: Saved => 201 | Conflict => Result.Conflict(id)
+                """
+            )
+        );
+
+        Assert.Equal(
+            """
+            |Validate|Save|Respond|Condition|
+            |---|---|---|---|
+            |Valid|Saved|201||
+            |Valid|Conflict|Result.Conflict(id)||
+            |Invalid||throws ArgumentException|the id is empty|
             """,
             ExtractTable(files),
             ignoreLineEndingDifferences: true
