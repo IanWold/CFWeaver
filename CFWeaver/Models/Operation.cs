@@ -65,6 +65,7 @@ public record Operation(string Name, IEnumerable<Step> Steps, string Description
                     .Where(r => steps.ContainsKey(r.Response))
                     .Select(r => Diagnostics.Warnings.ReturnNamesStep.Warning(r.Line))
                 )
+                .Concat(SharedConditionWarnings())
                 .OrderBy(w => w.Line.Number);
 
             void Reach(Step step)
@@ -76,6 +77,34 @@ public record Operation(string Name, IEnumerable<Step> Steps, string Description
                         Reach(steps[gotoResult.Goto]);
                     }
                 }
+            }
+
+            IEnumerable<Warning> SharedConditionWarnings()
+            {
+                var splits = new Dictionary<string, HashSet<string>>();
+
+                foreach (var paths in Scenarios.GroupBy(s => string.Join(" and ", s.Conditions)).Select(g => g.Select(s => s.Path).ToList()))
+                {
+                    for (var i = 0; i < paths.Count; i++)
+                    {
+                        for (var j = i + 1; j < paths.Count; j++)
+                        {
+                            var (first, second) = paths[i].Zip(paths[j]).First(choices => choices.First != choices.Second);
+
+                            if (!splits.TryGetValue(first.Step, out var results))
+                            {
+                                splits[first.Step] = results = [];
+                            }
+
+                            results.UnionWith([first.Result, second.Result]);
+                        }
+                    }
+                }
+
+                return splits.Select(split => Diagnostics.Warnings.ScenariosShareConditions.Warning(
+                    steps[split.Key].Line,
+                    steps[split.Key].Results.Select(r => r.Name).Where(split.Value.Contains).Distinct().Select(name => $"`{name}`").JoinAnd()
+                ));
             }
         }
     }

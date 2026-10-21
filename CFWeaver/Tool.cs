@@ -56,6 +56,9 @@ static class Tool
           A detail written name=value, where the name is one word (letters, digits, _, - or .), sets a
           variable. Any other detail is the result's condition, and a result has at most one. Conditions
           along a path are joined with "and"; a variable shows the last value assigned along the path.
+          A scenario's conditions say what its test has to set up, so every scenario's should differ:
+          give each result a condition, except the one its step normally takes. CFWeaver warns when
+          two scenarios in an operation end up with the same conditions.
 
         Reserved characters:
           "|" separates results and "&" separates details, so neither can appear in a result name,
@@ -78,16 +81,19 @@ static class Tool
           be that operation's return values. CFWeaver warns if the step leaves one of them out, or has
           a result the operation never returns. The call isn't expanded: each operation keeps its own
           scenario table, and the output links each operation to the ones it calls and is called by.
+          The caller's table shows only the conditions written on its own results, so give each
+          returned value a condition there that sums up what causes it:
             # Get Item
-            * Authenticate: Valid | Invalid => 401
-            * Lookup: Found => 200 | NotFound => 404
+            * Authenticate: Valid | Invalid => 401 ? the request has no valid token
+            * Lookup: Found => 200 | NotFound => 404 ? no item has this id
 
             # Authenticate
-            * CheckToken: Valid | Missing => Invalid
-            * LoadUser: Found => Valid | NotFound => Invalid
+            * CheckToken: Valid | Missing => Invalid ? no token is sent
+            * LoadUser: Found => Valid | NotFound => Invalid ? the token's user was deleted
 
         Modeling tips (cfweaver help recipes has examples):
           - A step is a point where the code can go more than one way; straight-line code needs none.
+          - Write conditions as what a test sets up, so the Condition column reads as a test plan.
           - Loops: model one item as its own operation, and call it from the step that loops. A loop
             that stops at the first failure has the same outcomes as a single item.
           - Retries: model their outcomes, such as immediate success, eventual success and retries

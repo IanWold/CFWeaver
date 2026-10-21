@@ -4,6 +4,19 @@ The model syntax is small; most of the work is deciding what to model. These rec
 
 A _step_ is a point where the code can go more than one way. Code that always runs the same way, like logging or building a request, doesn't need a _step_ unless it can fail in a way you want to test.
 
+## Conditions That Tell Scenarios Apart
+
+Each scenario's conditions are what its test has to set up, so a good model gives every scenario different conditions, and the Condition column reads as a test plan. Give every _result_ a condition except the one its _step_ normally takes, and don't give two _results_ on the same _step_ the same condition.
+
+```markdown
+# Delete Item
+
+* Authorize: Allowed | Denied => 403 ? the caller doesn't own the item
+* Delete: Deleted => 204 | Missing => 404 ? no item has this id | Failed => 500 ? the database errors
+```
+
+This matters most on a _step_ that calls a [sub-operation](https://github.com/IanWold/CFWeaver/wiki/Control-Flow-State-Model#sub-operations). The caller's table shows only the conditions written on its own _results_, so give each returned value a condition that sums up what causes it, such as `Invalid => 401 ? the request has no valid token`; the _sub-operation_'s own table has the details. CFWeaver warns when two scenarios in an _operation_ have the same conditions.
+
 ## Exceptions
 
 Give each _step_ that can throw a single `Failed` _result_, rather than one per exception type, unless the code handles different exceptions differently. If the code catches a timeout and returns 504, the timeout is its own _result_.
@@ -24,7 +37,7 @@ When several inputs can be invalid, order the _steps_ the way the code checks th
 
 * ValidateLimit: Valid | TooLarge => 400 ? limit is over 100
 * ValidateSort: Valid | Unknown => 400 ? sort names a field that doesn't exist
-* Search: Found => 200 | Failed => 500
+* Search: Found => 200 | Failed => 500 ? the search index errors
 ```
 
 If the code collects every validation error before responding, a single _step_ is enough: `Validate: Valid | Invalid => 400`.
@@ -37,8 +50,8 @@ A loop that stops at its first failure has the same outcomes as a single item: e
 # Import Items
 
 * ParseFile: Parsed | Malformed => 400 ? the file isn't valid CSV
-* ImportRow: Imported | Rejected => 422
-* Commit: Committed => 200 | Failed => 500
+* ImportRow: Imported | Rejected => 422 ? a row has no name or duplicates another
+* Commit: Committed => 200 | Failed => 500 ? the transaction fails
 
 # ImportRow
 
@@ -81,17 +94,17 @@ Behavior you don't model, such as routing, deserialization or serialization hand
 Assumes the framework has matched the route and parsed `id` as an integer; other routes return 404 before this code runs.
 
 * Authorize: Allowed | Denied => 403 ? the caller can't read items
-* Lookup: Found => 200 | Missing => 404
+* Lookup: Found => 200 | Missing => 404 ? no item has this id
 ```
 
 ## When the Caller Needs to Know Why
 
-A caller sees only the value a _sub-operation_ returns, not how it got there. Below, `FetchItem` returns `Unavailable` both when the circuit breaker is open and when the service errors. That's fine, because the endpoint does the same thing in both cases.
+A caller sees only the value a _sub-operation_ returns, not how it got there. Below, `FetchItem` returns `Unavailable` both when the circuit breaker is open and when the service errors. That's fine, because the endpoint does the same thing in both cases. The endpoint's condition for `Unavailable` sums up both causes, and FetchItem's own table lists them separately.
 
 ```markdown
 # GET /items/{id}
 
-* FetchItem: Found => 200 | NotFound => 404 | Unavailable => 503
+* FetchItem: Found => 200 | NotFound => 404 ? the service has no item with this id | Unavailable => 503 ? the service errors or its circuit breaker is open
 
 # FetchItem
 

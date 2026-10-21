@@ -64,7 +64,7 @@ public class TestHelp
 
         Assert.StartsWith("## `1003`", result.Output);
         Assert.Contains("# Authenticate", result.Output);
-        Assert.Contains("Adding one, such as `Error => 500`, fixes it.", result.Output);
+        Assert.Contains("Adding one, such as `Error => 500 ? the user store errors`, fixes it.", result.Output);
         Assert.DoesNotContain("## `1004`", result.Output);
         Assert.Equal(0, result.ExitCode);
     }

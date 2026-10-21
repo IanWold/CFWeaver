@@ -107,15 +107,15 @@ Each step in an operation must have a different name. The same step name can be 
 Invalid:
 
 ```markdown
-* Validate: Valid | NotValid => 400
-* Validate: Valid => 200 | NotValid => 422
+* Validate: Valid | NotValid => 400 ? the request is invalid
+* Validate: Valid => 200 | NotValid => 422 ? the item is invalid
 ```
 
 Valid:
 
 ```markdown
-* ValidateRequest: Valid | NotValid => 400
-* ValidateItem: Valid => 200 | NotValid => 422
+* ValidateRequest: Valid | NotValid => 400 ? the request is invalid
+* ValidateItem: Valid => 200 | NotValid => 422 ? the item is invalid
 ```
 
 ## `205` Step has no results
@@ -126,7 +126,7 @@ Invalid:
 
 ```markdown
 * Authenticate
-* Validate: Valid => 200 | NotValid => 400
+* Validate: Valid => 200 | NotValid => 400 ? the request is invalid
 ```
 
 Valid:
@@ -134,8 +134,8 @@ Valid:
 ```markdown
 * Authenticate
     - Success
-    - Failure => 403
-* Validate: Valid => 200 | NotValid => 400
+    - Failure => 403 ? the caller isn't authenticated
+* Validate: Valid => 200 | NotValid => 400 ? the request is invalid
 ```
 
 ## `206` Step must come after an operation heading
@@ -149,7 +149,7 @@ Invalid:
 
 # Get Item
 
-* Authenticate: Success => 200 | Failure => 403
+* Authenticate: Success => 200 | Failure => 403 ? the caller isn't authenticated
 ```
 
 Valid:
@@ -159,7 +159,7 @@ Valid:
 
 # Get Item
 
-* Authenticate: Success => 200 | Failure => 403
+* Authenticate: Success => 200 | Failure => 403 ? the caller isn't authenticated
 ```
 
 ## `301` Result has no name
@@ -175,7 +175,7 @@ Invalid:
 Valid:
 
 ```markdown
-* Step: Success => 200 | NotFound => 404 | Failure => 500
+* Step: Success => 200 | NotFound => 404 ? no item has this id | Failure => 500 ? the database errors
 ```
 
 ## `302` No return or goto value given for result
@@ -217,15 +217,15 @@ When a result [branches](https://github.com/IanWold/CFWeaver/wiki/Control-Flow-S
 Invalid:
 
 ```markdown
-* GetFromDatabase: Found = UpdateOnDatabase | NotFound = 404
-* UpdateInDatabase: Completed => 200 | Error => 500
+* GetFromDatabase: Found = UpdateOnDatabase | NotFound = 404 ? no item has this id
+* UpdateInDatabase: Completed => 200 | Error => 500 ? the update fails
 ```
 
 Valid:
 
 ```markdown
-* GetFromDatabase: Found = UpdateInDatabase | NotFound => 404
-* UpdateInDatabase: Completed => 200 | Error => 500
+* GetFromDatabase: Found = UpdateInDatabase | NotFound => 404 ? no item has this id
+* UpdateInDatabase: Completed => 200 | Error => 500 ? the update fails
 ```
 
 ## `305` Result must go to a later step
@@ -235,15 +235,15 @@ A result can only [branch](https://github.com/IanWold/CFWeaver/wiki/Control-Flow
 Invalid:
 
 ```markdown
-* Authenticate: Success | Failure => 403
+* Authenticate: Success | Failure => 403 ? the caller isn't authenticated
 * Validate: Valid => 200 | Retry = Authenticate
 ```
 
 Valid:
 
 ```markdown
-* Authenticate: Success | Failure => 403
-* Validate: Valid => 200 | NotValid => 400
+* Authenticate: Success | Failure => 403 ? the caller isn't authenticated
+* Validate: Valid => 200 | NotValid => 400 ? the request is invalid
 ```
 
 ## `306` Result on the final step must return a value with `=>`
@@ -253,15 +253,15 @@ A result without a return value continues to the next step, so the results on th
 Invalid:
 
 ```markdown
-* Authenticate: Success | Failure => 403
-* Validate: Valid | NotValid => 400
+* Authenticate: Success | Failure => 403 ? the caller isn't authenticated
+* Validate: Valid | NotValid => 400 ? the request is invalid
 ```
 
 Valid:
 
 ```markdown
-* Authenticate: Success | Failure => 403
-* Validate: Valid => 200 | NotValid => 400
+* Authenticate: Success | Failure => 403 ? the caller isn't authenticated
+* Validate: Valid => 200 | NotValid => 400 ? the request is invalid
 ```
 
 ## `307` A goto must be a single step name, and a return value can't contain `&` or `=`; variables go after `?`
@@ -321,7 +321,7 @@ Warnings point out likely mistakes in a model that is otherwise well-formed. The
 No path through the operation reaches the step, so it never appears in a scenario. This usually means the results before it all return or branch past it.
 
 ```markdown
-* First: Done => 200 | Skip = Third
+* First: Done => 200 | Skip = Third ? the item is cached
 * Second: Done => 201
 * Third: Done => 202
 ```
@@ -333,8 +333,8 @@ Here `First` either returns `200` or branches to `Third`, so `Second` is never r
 The result [returns](https://github.com/IanWold/CFWeaver/wiki/Control-Flow-State-Model#returning) text that is also the name of a step in the operation. That usually means it was meant to [branch](https://github.com/IanWold/CFWeaver/wiki/Control-Flow-State-Model#branching) to the step, which is written with `=`.
 
 ```markdown
-* GetFromDatabase: Found => UpdateInDatabase | NotFound => 404
-* UpdateInDatabase: Completed => 200 | Error => 500
+* GetFromDatabase: Found => UpdateInDatabase | NotFound => 404 ? no item has this id
+* UpdateInDatabase: Completed => 200 | Error => 500 ? the update fails
 ```
 
 Here `Found` returns the text `UpdateInDatabase` instead of going to that step, so no path reaches `UpdateInDatabase`, and CFWeaver warns about that too. Writing `Found = UpdateInDatabase` fixes both.
@@ -346,16 +346,16 @@ The step has the same name as another operation, so it's read as calling it as a
 ```markdown
 # Get Item
 
-* Authenticate: Valid | Invalid => 401
-* Lookup: Found => 200 | NotFound => 404
+* Authenticate: Valid | Invalid => 401 ? the request has no valid token
+* Lookup: Found => 200 | NotFound => 404 ? no item has this id
 
 # Authenticate
 
-* CheckToken: Valid | Missing => Invalid
-* LoadUser: Found => Valid | NotFound => Invalid | Error => Error
+* CheckToken: Valid | Missing => Invalid ? no token is sent
+* LoadUser: Found => Valid | NotFound => Invalid ? the token's user was deleted | Error => Error ? the user store errors
 ```
 
-Here Authenticate can return `Error`, but the `Authenticate` step in Get Item has no `Error` result. Adding one, such as `Error => 500`, fixes it. If the step isn't meant to call the operation, rename one of them.
+Here Authenticate can return `Error`, but the `Authenticate` step in Get Item has no `Error` result. Adding one, such as `Error => 500 ? the user store errors`, fixes it. If the step isn't meant to call the operation, rename one of them.
 
 ## `1004` Step looks like it calls an operation that never returns one of its results
 
@@ -364,13 +364,26 @@ The step has the same name as another operation, so it's read as calling it as a
 ```markdown
 # Get Item
 
-* Authenticate: Valid | Invalid => 401 | Expired => 401
-* Lookup: Found => 200 | NotFound => 404
+* Authenticate: Valid | Invalid => 401 ? the request has no valid token | Expired => 401 ? the token has expired
+* Lookup: Found => 200 | NotFound => 404 ? no item has this id
 
 # Authenticate
 
-* CheckToken: Valid | Missing => Invalid | Expired => Invalid
-* LoadUser: Found => Valid | NotFound => Invalid
+* CheckToken: Valid | Missing => Invalid ? no token is sent | Expired => Invalid ? the token has expired
+* LoadUser: Found => Valid | NotFound => Invalid ? the token's user was deleted
 ```
 
 Here Authenticate returns `Invalid` when the token has expired, so the `Expired` result in Get Item never happens.
+
+## `1005` Results lead to scenarios with the same conditions; give them different conditions
+
+Two or more scenarios in the operation have exactly the same [conditions](https://github.com/IanWold/CFWeaver/wiki/Control-Flow-State-Model#conditions), so the conditions don't say how to set up a test for one rather than the other. CFWeaver reports the step where those scenarios split, and names its results that lead to them. Give those results different conditions: every result except the one the step normally takes needs a condition, and no two can be the same.
+
+```markdown
+* Authorize: Allowed | Denied => 403 | Expired => 401
+* Delete: Deleted => 204 | Failed => 500 ? the database errors
+```
+
+Here the scenarios through `Allowed` and `Deleted`, through `Denied`, and through `Expired` all have no conditions, so the warning names `Allowed`, `Denied` and `Expired`. `Allowed` is the step's usual result, so it can stay as it is; giving the other two conditions, such as `Denied => 403 ? the caller doesn't own the item` and `Expired => 401 ? the caller's session has expired`, fixes it.
+
+On a step that calls a [sub-operation](https://github.com/IanWold/CFWeaver/wiki/Control-Flow-State-Model#sub-operations), the caller's table shows only the conditions written on that step's results, so give each returned value a condition that sums up what causes it. The sub-operation's own table has the details.

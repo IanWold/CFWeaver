@@ -36,7 +36,7 @@ public class TestOutput
                 """
                 # Operation 1
 
-                * Step: Success => 200 | Failure => 400
+                * Step: Success => 200 | Failure => 400 ? the request is invalid
                 """
             )
         );
@@ -126,7 +126,7 @@ public class TestOutput
                 """
                 # Operation 1
 
-                * First: Done => 200 | Skip = Third
+                * First: Done => 200 | Skip = Third ? the item is cached
                 * Second: Done => 201
                 * Third: Done => 202
                 """
@@ -148,8 +148,8 @@ public class TestOutput
                 """
                 # Operation 1
 
-                * First: Done => 200 | Skip => Third
-                    - Next
+                * First: Done => 200 ? the item is cached | Skip => Third
+                    - Next ? the item isn't cached
                 * Second: Done => 201
                 * Third: Done => 202
                 """
@@ -167,6 +167,49 @@ public class TestOutput
     }
 
     [Fact]
+    public async Task WarnsWhenScenariosShareConditions()
+    {
+        var result = await RunTestAsync("input.md --check",
+            (
+                "input.md",
+                """
+                # Get Fabric
+
+                * AccessPolicy: Authorized | Unauthorized => 401 | Forbidden => 403
+                * Search: Found => 200 ? fabrics match the filter | Failed => 500 ? the search service errors
+                """
+            )
+        );
+
+        Assert.Equal(
+            ["Warning 1005 (line 3 \"* AccessPolicy: Authorized | Unauthorized => 401 | Forbidden => 403\"): Results `Unauthorized` and `Forbidden` lead to scenarios with the same conditions; give them different conditions."],
+            result.Error.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        );
+        Assert.Equal(0, result.ExitCode);
+    }
+
+    [Fact]
+    public async Task WarnsWhereScenariosWithSameConditionsSplit()
+    {
+        var result = await RunTestAsync("input.md --check",
+            (
+                "input.md",
+                """
+                # Operation 1
+
+                * Source: Cache ? the item is cached | Database ? the item is cached
+                * Load: Loaded => 200 | Failed => 500 ? loading fails
+                """
+            )
+        );
+
+        Assert.Equal(
+            ["Warning 1005 (line 3 \"* Source: Cache ? the item is cached | Database ? the item is cached\"): Results `Cache` and `Database` lead to scenarios with the same conditions; give them different conditions."],
+            result.Error.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        );
+    }
+
+    [Fact]
     public async Task WarnsWhenSubOperationReturnIsUnhandled()
     {
         var result = await RunTestAsync("input.md -o output.md -f md",
@@ -175,19 +218,19 @@ public class TestOutput
                 """
                 # My Endpoint
 
-                * Authenticate: Valid | Invalid => 403
-                * GetItem: Found => 200 | NotFound => 400 | Error => 500
+                * Authenticate: Valid | Invalid => 403 ? the token is invalid
+                * GetItem: Found => 200 | NotFound => 400 ? no item has this id | Error => 500 ? the database errors
 
                 # Authenticate
 
-                * CheckToken: Valid | Invalid => Invalid
-                * LoadUser: Found => Valid | NotFound => Invalid | Error => Error
+                * CheckToken: Valid | Invalid => Invalid ? the token is malformed
+                * LoadUser: Found => Valid | NotFound => Invalid ? the user was deleted | Error => Error ? the user store errors
                 """
             )
         );
 
         Assert.Equal(
-            ["Warning 1003 (line 3 \"* Authenticate: Valid | Invalid => 403\"): Step looks like it calls operation `Authenticate`, but doesn't handle its return value `Error`."],
+            ["Warning 1003 (line 3 \"* Authenticate: Valid | Invalid => 403 ? the token is invalid\"): Step looks like it calls operation `Authenticate`, but doesn't handle its return value `Error`."],
             result.Error.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
         );
         Assert.Equal(0, result.ExitCode);
@@ -205,14 +248,14 @@ public class TestOutput
 
                 * Authenticate
                     - Valid
-                    - Invalid => 403
+                    - Invalid => 403 ? the token is invalid
                     - Expired => 401
-                * GetItem: Found => 200 | NotFound => 404
+                * GetItem: Found => 200 ? the item exists | NotFound => 404 ? no item has this id
 
                 # Authenticate
 
-                * Authenticate: Valid | Invalid => Invalid
-                * LoadUser: Found => Valid | NotFound => Invalid
+                * Authenticate: Valid | Invalid => Invalid ? the token is malformed
+                * LoadUser: Found => Valid | NotFound => Invalid ? the user was deleted
                 """
             )
         );
@@ -233,13 +276,13 @@ public class TestOutput
                 """
                 # My Endpoint
 
-                * Authenticate: Valid | Invalid => 403
-                * GetItem: Found => 200 | NotFound => 404
+                * Authenticate: Valid | Invalid => 403 ? the token is invalid
+                * GetItem: Found => 200 | NotFound => 404 ? no item has this id
 
                 # Authenticate
 
-                * CheckToken: Valid | Invalid => Invalid
-                * LoadUser: Found => Valid | NotFound => Invalid
+                * CheckToken: Valid | Invalid => Invalid ? the token is malformed
+                * LoadUser: Found => Valid | NotFound => Invalid ? the user was deleted
                 """
             )
         );
@@ -403,9 +446,9 @@ public class TestOutput
                 """
                 # Operation 1
 
-                * First: Done => 200 | Skip = Third
+                * First: Done => 200 | Skip = Third ? the item is cached
                 * Second: Done => 201
-                * Third: Done => 202 | Failure => 500
+                * Third: Done => 202 | Failure => 500 ? the save fails
                 """
             )
         );

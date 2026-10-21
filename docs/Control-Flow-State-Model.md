@@ -107,6 +107,8 @@ Conditions can be written out as sentences and follow a question mark (`?`) at t
 * DeleteFromDatabase: Deleted => 200 ? the item exists | NotFound => 200 ? the item does not exist | Error => 500 ? the database errors on DELETE
 ```
 
+Each scenario's conditions describe what its test has to set up, so a well-written model gives every scenario different conditions, and the Condition column reads as a test plan. The simplest way to get there is to give every _result_ a condition except the one its _step_ normally takes, like `Success` and `Valid` above, and never to give two _results_ on the same _step_ the same condition. CFWeaver [warns](https://github.com/IanWold/CFWeaver/wiki/Parser-Errors#warnings) when two scenarios in an _operation_ end up with the same conditions. The examples before this section leave conditions out to keep them short.
+
 ### Variables
 
 Results can specify zero or more _variables_ to assign for the step, each of which gets its own column in the output table. Variables are defined in the same space as conditions, with a syntax that is similar to URL query strings.
@@ -147,7 +149,7 @@ Text between backticks is literal: none of these characters is reserved inside i
 # Search Items
 
 * Validate: Valid | Invalid => 400 ? `limit < 1 || limit > 100` & Query = `limit=0&offset=5`
-* Search: Found => `Results.Ok(items)` | Failed => 500
+* Search: Found => `Results.Ok(items)` | Failed => 500 ? the search index errors
 ```
 
 The backticks stay in the output, so the Markdown and HTML reports show the text as code. As in Markdown, text between two backticks can contain a single one: ``` ``it's a ` mark`` ```. A backtick that's never closed is an [error](https://github.com/IanWold/CFWeaver/wiki/Parser-Errors).
@@ -166,15 +168,15 @@ Writing results all out on a single line is a great help for simple steps, but c
     - Valid
     - NotValid => 400 ? the item id is less than 1
 * GetFromDatabase
-    - Found = UpdateOnDatabase
-    - NotFound = InsertOnDatabase
-    - Error => 500 ? DidError = yes
+    - Found = UpdateOnDatabase ? an item with this id exists
+    - NotFound = InsertOnDatabase ? no item has this id
+    - Error => 500 ? the database errors on select & DidError = yes
 * UpdateOnDatabase
     - Completed => 200
-    - Error => 500 ? DidError = yes
+    - Error => 500 ? the database errors on update & DidError = yes
 * InsertOnDatabase
     - Completed => 200
-    - Error => 500 ? DidError = yes
+    - Error => 500 ? the database errors on insert & DidError = yes
 ```
 
 In this example, specifying the results using `-` as the list bullet is equivalent to enumerating the results with `|` on the same line as the step definition.
@@ -186,8 +188,8 @@ Some logic is shared by many _operations_, like authentication, or is involved e
 ```markdown
 # Get Item
 
-* Authenticate: Valid | Invalid => 401
-* Lookup: Found => 200 | NotFound => 404
+* Authenticate: Valid | Invalid => 401 ? the request has no valid token
+* Lookup: Found => 200 | NotFound => 404 ? no item has this id
 
 # Authenticate
 
@@ -197,7 +199,7 @@ Some logic is shared by many _operations_, like authentication, or is involved e
 
 Here the `Authenticate` _step_ in Get Item calls the Authenticate _operation_, which returns `Valid` or `Invalid`. Get Item handles both: `Valid` continues to `Lookup`, and `Invalid` returns 401. Because _step_ names can't contain spaces, only an _operation_ whose name is a single word can be called this way, and the names must match exactly.
 
-CFWeaver doesn't combine the _operations_' scenarios. Each keeps its own table, so Get Item has one scenario for `Invalid`, and Authenticate's table shows the three ways to cause it. CFWeaver does check that the two agree, and [warns](https://github.com/IanWold/CFWeaver/wiki/Parser-Errors#warnings) if the _step_ leaves out one of the _operation_'s return values, or has a _result_ the _operation_ never returns.
+CFWeaver doesn't combine the _operations_' scenarios. Each keeps its own table, so Get Item has one scenario for `Invalid`, and Authenticate's table shows the three ways to cause it. Get Item's table shows only the conditions written on its own _results_, which is why `Invalid` has a condition that sums up what causes it. CFWeaver does check that the two agree, and [warns](https://github.com/IanWold/CFWeaver/wiki/Parser-Errors#warnings) if the _step_ leaves out one of the _operation_'s return values, or has a _result_ the _operation_ never returns.
 
 In the output, each _operation_ links to the _sub-operations_ it calls and to the _operations_ that call it, and notes that a caller's table shows only the value each call returns. [Modeling Recipes](https://github.com/IanWold/CFWeaver/wiki/Modeling-Recipes) shows how _sub-operations_ can model loops, and when a _sub-operation_ needs more than one return value.
 
@@ -216,9 +218,9 @@ This endpoint is located at `/items/{itemId}`.
 
 - `itemId`: int > 0
 
-* Authenticate: Success | Failure => 403
-* Validate: Valid | NotValid => 400
-* GetFromDatabase: Found => 200 | NotFound => 404 | Error => 500
+* Authenticate: Success | Failure => 403 ? the client is not authenticated
+* Validate: Valid | NotValid => 400 ? the item id is less than 1
+* GetFromDatabase: Found => 200 | NotFound => 404 ? no item has this id | Error => 500 ? the database errors
 ```
 
 Here, the first line describes the whole file, and the endpoint's location and the `itemId` list describe the Get Item operation.
