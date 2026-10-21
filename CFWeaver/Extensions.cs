@@ -9,7 +9,7 @@ file record ResultAccumulator<T>(IEnumerable<T> Successes, IEnumerable<Error> Er
 public static partial class Extensions
 {
 
-    [GeneratedRegex("`([^`]+)`")]
+    [GeneratedRegex("(?<!`)(`+)(?!`)(.+?)(?<!`)\\1(?!`)")]
     private static partial Regex InlineCode();
 
     [GeneratedRegex(@"[^\p{L}\p{M}\p{N}\p{Pc} -]")]
@@ -42,6 +42,11 @@ public static partial class Extensions
 
     internal static string HtmlEncode(this string text) =>
         WebUtility.HtmlEncode(text);
+
+    internal static string InlineMarkdownToHtml(this string text) =>
+        InlineCode().Replace(text.HtmlEncode(), match => match.Groups[2].Value is var code && code.Length > 2 && code[0] == ' ' && code[^1] == ' '
+            ? $"<code>{code[1..^1]}</code>"
+            : $"<code>{code}</code>");
 
     internal static string CsvField(this string text) =>
         text.IndexOfAny([',', '"', '\r', '\n']) >= 0
@@ -116,6 +121,6 @@ public static partial class Extensions
         }
 
         static string Inline(string text) =>
-            InlineCode().Replace(text.HtmlEncode(), "<code>$1</code>");
+            text.InlineMarkdownToHtml();
     }
 }

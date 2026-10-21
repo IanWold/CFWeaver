@@ -568,6 +568,23 @@ public class TestOutput
     }
 
     [Fact]
+    public async Task HtmlShowsLiteralTextAsCode()
+    {
+        var result = await RunTestAsync("input.md -o - -f html",
+            (
+                "input.md",
+                """
+                # Operation 1
+
+                * Step: Low => 400 ? `limit < 1 && offset > 0` | Ok => 200
+                """
+            )
+        );
+
+        Assert.Contains("<td><code>limit &lt; 1 &amp;&amp; offset &gt; 0</code></td>", result.Output);
+    }
+
+    [Fact]
     public async Task DescriptionsAreCopiedToOutput()
     {
         var model =

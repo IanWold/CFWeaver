@@ -318,6 +318,25 @@ public class TestErrors
     }
 
     [Fact]
+    public async Task ResultHasUnclosedBacktick()
+    {
+        var result = await RunTestAsync("input.md -o output.html",
+            (
+                "input.md",
+                """
+                # Operation 1
+
+                * Step: Low => 400 ? `limit < 1 | Ok => 200
+                """
+            )
+        );
+
+        Assert.Contains("Error 309 (line 3 \"Low => 400 ? `limit < 1\"): Result has a backtick that is never closed; literal text goes between a pair of backticks.", result.Error);
+        Assert.Equal(1, result.ExitCode);
+        Assert.Empty(result.Files);
+    }
+
+    [Fact]
     public async Task SelfContainedRequiresHtml()
     {
         var result = await RunTestAsync("input.md -o output.md -f md --self-contained",

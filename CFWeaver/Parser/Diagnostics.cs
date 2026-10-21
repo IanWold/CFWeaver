@@ -41,6 +41,7 @@ static class Diagnostics
         internal static readonly LineError ResultFinalStepNoReturn = new(306, "Result on the final step must return a value with `=>`");
         internal static readonly LineError ResultValueNotSingleWord = new(307, "A goto must be a single step name, and a return value can't contain `&` or `=`; variables go after `?`");
         internal static readonly LineError ResultMultipleConditions = new(308, "Result has more than one condition; `&` separates variables, so it can't appear in a condition");
+        internal static readonly LineError ResultUnclosedBacktick = new(309, "Result has a backtick that is never closed; literal text goes between a pair of backticks");
     }
 
     internal static class Warnings

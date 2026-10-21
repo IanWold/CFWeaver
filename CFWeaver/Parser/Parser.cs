@@ -171,7 +171,7 @@ public static class Parser
 
         static ParseResult<StepAst> ParseStepHeader(Line line)
         {
-            var split = line.Text.Split(':', 2);
+            var split = line.Text.SplitOutsideLiterals(':', 2);
 
             var name = split.First().Replace("*", "").Trim();
             var isOnlyName = split.Length == 1;
@@ -191,19 +191,24 @@ public static class Parser
 
             return isOnlyName
                 ? new StepAst(name, [], line)
-                : split.Last().Split('|')
+                : split.Last().SplitOutsideLiterals('|')
                     .Select(l => ParseResult(new Line(l.Trim(), line.Number)))
                     .Coalesce(results => new StepAst(name, results, line));
         }
         
         static ParseResult<ResultAst> ParseResult(Line line)
         {
-            var variablesSplit = line.Text.Split('?', 2);
+            if (line.Text.HasUnclosedBacktick())
+            {
+                return Diagnostics.Errors.ResultUnclosedBacktick.Result(line);
+            }
 
-            var split = variablesSplit.First().Split('=', 2);
-            var variablesText = variablesSplit.Length > 1 ? variablesSplit.Last().Split('&').Where(v => !string.IsNullOrWhiteSpace(v)) : [];
+            var variablesSplit = line.Text.SplitOutsideLiterals('?', 2);
+
+            var split = variablesSplit.First().SplitOutsideLiterals('=', 2);
+            var variablesText = variablesSplit.Length > 1 ? variablesSplit.Last().SplitOutsideLiterals('&').Where(v => !string.IsNullOrWhiteSpace(v)) : [];
             var variables = variablesText.Select(v => {
-                var assignmentSplit = v.Split('=', 2, StringSplitOptions.TrimEntries);
+                var assignmentSplit = v.SplitOutsideLiterals('=', 2).Select(s => s.Trim()).ToArray();
                 return assignmentSplit.Length > 1 && IsVariableName(assignmentSplit.First())
                     ? new VariableAst(
                         Name: assignmentSplit.First(),
@@ -244,7 +249,7 @@ public static class Parser
             {
                 return Diagnostics.Errors.ResultNoReturnOrGoto.Result(line);
             }
-            else if (value.Any(c => c is '&' or '=' || (!isReturn && char.IsWhiteSpace(c))))
+            else if (isReturn ? value.AnyCharacterOutsideLiterals(c => c is '&' or '=') : value.Any(c => char.IsWhiteSpace(c) || c is '&' or '='))
             {
                 return Diagnostics.Errors.ResultValueNotSingleWord.Result(line);
             }
@@ -255,6 +260,79 @@ public static class Parser
 
             static bool IsVariableName(string name) =>
                 name.Length > 0 && name.All(c => char.IsLetterOrDigit(c) || c is '_' or '-' or '.');
+        }
+    }
+
+    static string[] SplitOutsideLiterals(this string text, char separator, int count = int.MaxValue)
+    {
+        var (isLiteral, _) = FindLiterals(text);
+        var parts = new List<string>();
+        var start = 0;
+
+        for (var i = 0; i < text.Length && parts.Count < count - 1; i++)
+        {
+            if (text[i] == separator && !isLiteral[i])
+            {
+                parts.Add(text[start..i]);
+                start = i + 1;
+            }
+        }
+
+        return [..parts, text[start..]];
+    }
+
+    static bool AnyCharacterOutsideLiterals(this string text, Func<char, bool> predicate)
+    {
+        var (isLiteral, _) = FindLiterals(text);
+        return text.Where((c, i) => !isLiteral[i] && predicate(c)).Any();
+    }
+
+    static bool HasUnclosedBacktick(this string text) =>
+        FindLiterals(text).HasUnclosedBacktick;
+
+    static (bool[] IsLiteral, bool HasUnclosedBacktick) FindLiterals(string text)
+    {
+        var isLiteral = new bool[text.Length];
+        var hasUnclosedBacktick = false;
+
+        for (var i = 0; i < text.Length;)
+        {
+            if (text[i] != '`')
+            {
+                i++;
+                continue;
+            }
+
+            var openingLength = BacktickRunLength(i);
+            var closing = i + openingLength;
+
+            while (closing < text.Length && !(text[closing] == '`' && BacktickRunLength(closing) == openingLength))
+            {
+                closing += text[closing] == '`' ? BacktickRunLength(closing) : 1;
+            }
+
+            if (closing >= text.Length)
+            {
+                hasUnclosedBacktick = true;
+                i += openingLength;
+                continue;
+            }
+
+            Array.Fill(isLiteral, true, i, closing + openingLength - i);
+            i = closing + openingLength;
+        }
+
+        return (isLiteral, hasUnclosedBacktick);
+
+        int BacktickRunLength(int start)
+        {
+            var end = start;
+            while (end < text.Length && text[end] == '`')
+            {
+                end++;
+            }
+
+            return end - start;
         }
     }
 }

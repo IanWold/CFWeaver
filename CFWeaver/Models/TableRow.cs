@@ -10,7 +10,7 @@ public record TableRow(IEnumerable<string> Cells)
 
     internal void AppendHtml(StringBuilder sb) => sb
         .AppendLine("<tr>")
-        .AppendJoin("", Cells.Select(c => $"<td>{c.HtmlEncode()}</td>"))
+        .AppendJoin("", Cells.Select(c => $"<td>{c.InlineMarkdownToHtml()}</td>"))
         .AppendLine("</tr>");
 
     internal void AppendMarkdown(StringBuilder sb) => sb

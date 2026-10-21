@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace CFWeaver.Tests;
 
 using static Runner;
@@ -345,6 +347,42 @@ public class TestGeneration
             """,
             ExtractTable(files),
             ignoreLineEndingDifferences: true
+        );
+    }
+
+    [Fact]
+    public async Task BackticksMakeReservedCharactersLiteral()
+    {
+        var result = await RunTestAsync("input.md -o - -f json",
+            (
+                "input.md",
+                """
+                # Operation 1
+
+                * Validate: Valid | Invalid => 400 ? `limit < 1 || limit > 100` & Query = `a=1&b=2`
+                * Run: Found => `Results.Ok(items)` | `a | b` => `x && y` ? ``it's a ` mark`` | Failed => 500
+                """
+            )
+        );
+
+        using var json = JsonDocument.Parse(result.Output);
+
+        Assert.Equal(
+            [
+                "Validate:Valid > Run:Found = `Results.Ok(items)` |  | ",
+                "Validate:Valid > Run:`a | b` = `x && y` | ``it's a ` mark`` | ",
+                "Validate:Valid > Run:Failed = 500 |  | ",
+                "Validate:Invalid = 400 | `limit < 1 || limit > 100` | Query=`a=1&b=2`",
+            ],
+            json.RootElement.GetProperty("operations")[0].GetProperty("scenarios")
+                .EnumerateArray()
+                .Select(s =>
+                    $"{string.Join(" > ", s.GetProperty("path").EnumerateArray().Select(c => $"{c.GetProperty("step").GetString()}:{c.GetProperty("result").GetString()}"))}"
+                    + $" = {s.GetProperty("response")}"
+                    + $" | {string.Join(", ", s.GetProperty("conditions").EnumerateArray().Select(c => c.GetString()))}"
+                    + $" | {string.Join(", ", s.GetProperty("variables").EnumerateObject().Select(v => $"{v.Name}={v.Value.GetString()}"))}"
+                )
+                .ToArray()
         );
     }
 }

@@ -62,6 +62,10 @@ static class Tool
           condition or value. A result name or value can't contain "=" or "?"; after the "?", they're
           ordinary text. Other punctuation, such as commas, quotes and "<", is fine anywhere: the
           outputs escape it.
+          Text between backticks is literal, so it can contain any of these, which suits code:
+            Invalid => 400 ? `limit < 1 || limit > 100`
+          The backticks are kept, so Markdown and HTML show the text as code. To include a backtick,
+          use two around the text: ``it's a ` mark``.
 
         Descriptions:
           Text and - lists between an operation's heading and its first step describe the operation,
