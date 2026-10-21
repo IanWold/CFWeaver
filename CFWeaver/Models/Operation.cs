@@ -111,7 +111,7 @@ public record Operation(string Name, IEnumerable<Step> Steps, string Description
 
     internal IEnumerable<(Step Step, Operation Operation)> Calls(IEnumerable<Operation> operations) =>
         Steps.SelectMany(step => operations
-            .Where(o => o.Name == step.Name && !ReferenceEquals(o, this))
+            .Where(o => o.Name == (step.SubOperation ?? step.Name) && !ReferenceEquals(o, this))
             .Take(1)
             .Select(o => (step, o))
         );
@@ -162,7 +162,7 @@ public record Operation(string Name, IEnumerable<Step> Steps, string Description
 
     IEnumerable<string> SubOperationNotes(IEnumerable<Operation> operations, Func<Operation, string> link)
     {
-        var calls = Calls(operations).Select(call => call.Operation).ToList();
+        var calls = Calls(operations).Select(call => call.Operation).Distinct().ToList();
         if (calls.Count > 0)
         {
             yield return $"Calls {calls.Select(link).JoinAnd()} as {(calls.Count == 1 ? "a sub-operation" : "sub-operations")}. This table shows only the value each call returns; the paths that lead to it are in that operation's own table.";

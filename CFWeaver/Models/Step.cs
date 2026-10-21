@@ -2,7 +2,7 @@ using System.Text;
 
 namespace CFWeaver;
 
-public record Step(string Name, IEnumerable<Result> Results, Line Line)
+public record Step(string Name, IEnumerable<Result> Results, Line Line, string? SubOperation = null)
 {
     internal void AppendMermaid(StringBuilder sb, IReadOnlyDictionary<string, string> responseStates) => sb.AppendDelegate(
         Results

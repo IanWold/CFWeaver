@@ -90,6 +90,9 @@ static class Tool
             # Authenticate
             * CheckToken: Valid | Missing => Invalid ? no token is sent
             * LoadUser: Found => Valid | NotFound => Invalid ? the token's user was deleted
+          To call an operation from a step with a different name, such as one parser used for two
+          inputs, or an operation whose name has spaces, put its name in brackets after the step's:
+            * BindExclude [Parse Filter]: Parsed | Invalid => 400 ? an exclude token is malformed
 
         Modeling tips (cfweaver help recipes has examples):
           - A step is a point where the code can go more than one way; straight-line code needs none.

@@ -59,7 +59,7 @@ A loop that stops at its first failure has the same outcomes as a single item: e
 * Insert: Inserted => Imported | Duplicate => Rejected ? a row with the same name exists
 ```
 
-If the loop carries on past failures, model the outcomes the code acts on instead, such as `AllImported` and `SomeRejected`.
+If the loop carries on past failures, model the outcomes the code acts on instead, such as `AllImported` and `SomeRejected`. If two _steps_ loop over the same kind of item, such as a list of filters and a list of exclusions parsed the same way, name the _operation_ in brackets after each _step_'s name instead: `* BindExclude [Parse Filter]: Parsed | Invalid => 400 ? an exclude token is malformed`.
 
 ## Retries
 
@@ -113,6 +113,24 @@ A caller sees only the value a _sub-operation_ returns, not how it got there. Be
 ```
 
 If the endpoint treated them differently, for example by passing on the service's status code, which an open breaker doesn't have, `FetchItem` would need a separate return value for each case. Sharing one value would let the model describe paths the code can't take.
+
+## Validation That Happens Later
+
+Sometimes a _sub-operation_ produces something that's only checked later, such as text that the caller parses afterwards. If some of the _sub-operation_'s paths always produce something that the later check rejects, give those paths their own return value, so the caller can send them straight to the failure.
+
+```markdown
+# Bind Filter
+
+* FilterToken: Text | Blank => 400 ? the token's value is blank, which never deserializes | Malformed => 400 ? the token has no colon
+* Deserialize: Valid => 200 | Invalid => 400 ? the value has the wrong type for its property
+
+# FilterToken
+
+* Split: Split | Missing => Malformed ? the token has no colon
+* Value: Present => Text | Empty => Blank ? the token's value is blank
+```
+
+`FilterToken` doesn't check its text; it only builds the text that `Deserialize` checks later. A blank value always builds text that fails to deserialize. If `FilterToken` returned `Text` for it too, Bind Filter's table would include a scenario where a blank value deserializes successfully, which the code can't do. Returning `Blank` separately lets Bind Filter send it straight to 400.
 
 ## Conditions Are Descriptions
 

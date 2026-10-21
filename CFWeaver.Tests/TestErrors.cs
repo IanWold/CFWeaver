@@ -318,6 +318,44 @@ public class TestErrors
     }
 
     [Fact]
+    public async Task StepCallsUnknownOperation()
+    {
+        var result = await RunTestAsync("input.md -o output.html",
+            (
+                "input.md",
+                """
+                # Operation 1
+
+                * Load [Missing]: Done => 200
+                """
+            )
+        );
+
+        Assert.Contains("Error 207 (line 3 \"* Load [Missing]: Done => 200\"): Step calls an operation that does not exist.", result.Error);
+        Assert.Equal(1, result.ExitCode);
+        Assert.Empty(result.Files);
+    }
+
+    [Fact]
+    public async Task StepCallsOwnOperation()
+    {
+        var result = await RunTestAsync("input.md -o output.html",
+            (
+                "input.md",
+                """
+                # Operation 1
+
+                * Load [Operation 1]: Done => 200
+                """
+            )
+        );
+
+        Assert.Contains("Error 208 (line 3 \"* Load [Operation 1]: Done => 200\"): Step calls the operation it belongs to.", result.Error);
+        Assert.Equal(1, result.ExitCode);
+        Assert.Empty(result.Files);
+    }
+
+    [Fact]
     public async Task ResultHasUnclosedBacktick()
     {
         var result = await RunTestAsync("input.md -o output.html",

@@ -20,7 +20,7 @@ CFWeaver turns a control flow state model (CFSM), written in Markdown, into one 
 - After `?`, a result's details are separated by `&`. A detail written `name=value`, with a one-word name, sets a variable; any other detail is the result's condition, and a result has at most one. Variables never go straight after a return value.
 - Each scenario's conditions are what its test has to set up, so they should differ between scenarios. Give every result a condition except the one its step normally takes, and never give two results on one step the same condition. This includes a step that calls a sub-operation: the caller's table shows only the conditions written on that step, so sum up there what causes each returned value. Warning 1005 points out scenarios that share conditions.
 - `|`, `&`, `=` and `?` are reserved. Wrap code, or any other text containing them, in backticks: `` Invalid => 400 ? `limit < 1 || limit > 100` ``.
-- A step with the same name as another operation calls that operation as a sub-operation, so its results must be exactly the operation's return values. The call isn't expanded: each operation keeps its own scenario table.
+- A step with the same name as another operation calls that operation as a sub-operation, so its results must be exactly the operation's return values. To call an operation from a step with a different name, such as one helper used by two steps, or an operation whose name has spaces, put the operation's name in brackets after the step's: `* BindExclude [Parse Filter]: Parsed | Invalid => 400 ? an exclude token is malformed`. The call isn't expanded: each operation keeps its own scenario table.
 
 ## Example
 

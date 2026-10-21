@@ -15,7 +15,10 @@ static class Diagnostics
         internal record LineError(int Code, string Message)
         {
             public FailureResult Result(Line line) =>
-                new([new(Code, Message, line)]);
+                new([Error(line)]);
+
+            public Error Error(Line line) =>
+                new(Code, Message, line);
         }
 
         internal static readonly GeneralError InputNoOperations = new(1, "Input contains no operation definitions");
@@ -33,6 +36,8 @@ static class Diagnostics
         internal static readonly LineError StepDuplicateName = new(204, "Step names must be unique within an operation");
         internal static readonly LineError StepNoResults = new(205, "Step has no results");
         internal static readonly LineError StepOutsideOperation = new(206, "Step must come after an operation heading");
+        internal static readonly LineError StepCallsUnknownOperation = new(207, "Step calls an operation that does not exist");
+        internal static readonly LineError StepCallsOwnOperation = new(208, "Step calls the operation it belongs to");
 
         internal static readonly LineError ResultNoName = new(301, "Result has no name");
         internal static readonly LineError ResultNoReturnOrGoto = new(302, "No return or goto value given for result");

@@ -199,6 +199,19 @@ Some logic is shared by many _operations_, like authentication, or is involved e
 
 Here the `Authenticate` _step_ in Get Item calls the Authenticate _operation_, which returns `Valid` or `Invalid`. Get Item handles both: `Valid` continues to `Lookup`, and `Invalid` returns 401. Because _step_ names can't contain spaces, only an _operation_ whose name is a single word can be called this way, and the names must match exactly.
 
+To call an _operation_ from a _step_ with a different name, put the _operation_'s name in brackets after the _step_'s name. This way a _step_ can call an _operation_ whose name has spaces, and more than one _step_ can call the same _operation_:
+
+```markdown
+# Bind Query
+
+* BindFilter [Parse Filter]: Parsed | Invalid => 400 ? a filter token is malformed
+* BindExclude [Parse Filter]: Parsed => 200 | Invalid => 400 ? an exclude token is malformed
+
+# Parse Filter
+
+* Split: Parsed => Parsed | Malformed => Invalid ? the token has no colon
+```
+
 CFWeaver doesn't combine the _operations_' scenarios. Each keeps its own table, so Get Item has one scenario for `Invalid`, and Authenticate's table shows the three ways to cause it. Get Item's table shows only the conditions written on its own _results_, which is why `Invalid` has a condition that sums up what causes it. CFWeaver does check that the two agree, and [warns](https://github.com/IanWold/CFWeaver/wiki/Parser-Errors#warnings) if the _step_ leaves out one of the _operation_'s return values, or has a _result_ the _operation_ never returns.
 
 In the output, each _operation_ links to the _sub-operations_ it calls and to the _operations_ that call it, and notes that a caller's table shows only the value each call returns. [Modeling Recipes](https://github.com/IanWold/CFWeaver/wiki/Modeling-Recipes) shows how _sub-operations_ can model loops, and when a _sub-operation_ needs more than one return value.

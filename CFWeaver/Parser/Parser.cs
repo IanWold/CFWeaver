@@ -4,7 +4,7 @@ file record OperationLines(Line Heading, List<string> Description, List<Line> St
 
 file record OperationAst(string Name, string Description, IEnumerable<StepAst> Steps);
 
-file record StepAst(string Name, IEnumerable<ResultAst> Results, Line Line);
+file record StepAst(string Name, IEnumerable<ResultAst> Results, Line Line, string? SubOperation = null);
 
 file record ResultAst(string Name, IEnumerable<VariableAst> Variables, Line Line, string? Goto = null, string? Response = null);
 
@@ -61,7 +61,24 @@ public static class Parser
                 success: Resolve,
                 failure: errors => new FailureResult(errors)
             ))
-            .Coalesce(resolved => new Document(resolved, Describe(preamble)));
+            .Coalesce(resolved => resolved.ToList())
+            .Map<ParseResult<Document>>(
+                success: resolved => CheckSubOperations(resolved) is { Count: > 0 } errors
+                    ? new FailureResult(errors)
+                    : new Document(resolved, Describe(preamble)),
+                failure: errors => new FailureResult(errors)
+            );
+
+        static List<Error> CheckSubOperations(List<Operation> operations) =>
+        [
+            ..operations.SelectMany(operation => operation.Steps
+                .Where(step => step.SubOperation is string name && (name == operation.Name || !operations.Any(o => o.Name == name)))
+                .Select(step => step.SubOperation == operation.Name
+                    ? Diagnostics.Errors.StepCallsOwnOperation.Error(step.Line)
+                    : Diagnostics.Errors.StepCallsUnknownOperation.Error(step.Line)
+                )
+            )
+        ];
 
         static string Describe(IEnumerable<string> lines)
         {
@@ -90,7 +107,7 @@ public static class Parser
 
                 return step.Results
                     .Select(r => ResolveResult(r, index))
-                    .Coalesce(results => new Step(step.Name, results, step.Line));
+                    .Coalesce(results => new Step(step.Name, results, step.Line, step.SubOperation));
             }
 
             ParseResult<Result> ResolveResult(ResultAst result, int index)
@@ -173,7 +190,10 @@ public static class Parser
         {
             var split = line.Text.SplitOutsideLiterals(':', 2);
 
-            var name = split.First().Replace("*", "").Trim();
+            var header = split.First().Replace("*", "").Trim();
+            var (name, subOperation) = header.EndsWith(']') && header.IndexOf('[') is var open and > 0
+                ? (header[..open].Trim(), header[(open + 1)..^1].Trim())
+                : (header, null);
             var isOnlyName = split.Length == 1;
 
             if (isOnlyName && name.Contains(' '))
@@ -190,10 +210,10 @@ public static class Parser
             }
 
             return isOnlyName
-                ? new StepAst(name, [], line)
+                ? new StepAst(name, [], line, subOperation)
                 : split.Last().SplitOutsideLiterals('|')
                     .Select(l => ParseResult(new Line(l.Trim(), line.Number)))
-                    .Coalesce(results => new StepAst(name, results, line));
+                    .Coalesce(results => new StepAst(name, results, line, subOperation));
         }
         
         static ParseResult<ResultAst> ParseResult(Line line)

@@ -162,6 +162,54 @@ Valid:
 * Authenticate: Success => 200 | Failure => 403 ? the caller isn't authenticated
 ```
 
+## `207` Step calls an operation that does not exist
+
+A step can name the operation it calls in brackets after its own name, to call it as a [sub-operation](https://github.com/IanWold/CFWeaver/wiki/Control-Flow-State-Model#sub-operations). That operation must be defined in the same file, with exactly that name.
+
+Invalid:
+
+```markdown
+# Bind Query
+
+* BindFilter [ParseFilter]: Parsed => 200 | Invalid => 400 ? a filter token is malformed
+
+# Parse Filter
+
+* Split: Parsed => Parsed | Malformed => Invalid ? the token has no colon
+```
+
+Valid:
+
+```markdown
+# Bind Query
+
+* BindFilter [Parse Filter]: Parsed => 200 | Invalid => 400 ? a filter token is malformed
+
+# Parse Filter
+
+* Split: Parsed => Parsed | Malformed => Invalid ? the token has no colon
+```
+
+## `208` Step calls the operation it belongs to
+
+A step can't name its own operation in brackets, since an operation can't call itself.
+
+Invalid:
+
+```markdown
+# Parse Filter
+
+* Split [Parse Filter]: Parsed => Parsed | Malformed => Invalid ? the token has no colon
+```
+
+Valid:
+
+```markdown
+# Parse Filter
+
+* Split: Parsed => Parsed | Malformed => Invalid ? the token has no colon
+```
+
 ## `301` Result has no name
 
 Results must have names.

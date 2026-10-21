@@ -210,6 +210,42 @@ public class TestOutput
     }
 
     [Fact]
+    public async Task StepsCanNameTheOperationTheyCall()
+    {
+        var model =
+            """
+            # Bind Query
+
+            * BindFilter [Parse Token]
+                - Parsed
+                - Invalid => 400 ? a filter token is malformed
+            * BindExclude [Parse Token]: Parsed => 200 | Invalid => 400 ? an exclude token is malformed | Empty => 204 ? no exclude tokens are sent
+
+            # Parse Token
+
+            * Split: Parsed => Parsed | Malformed => Invalid ? the token has no colon
+            """;
+
+        var json = await RunTestAsync("input.md -o - -f json", ("input.md", model));
+        var markdown = await RunTestAsync("input.md -o - -f md", ("input.md", model));
+
+        using var document = JsonDocument.Parse(json.Output);
+        var operations = document.RootElement.GetProperty("operations");
+
+        Assert.Equal(
+            ["BindFilter > Parse Token", "BindExclude > Parse Token"],
+            operations[0].GetProperty("calls").EnumerateArray().Select(c => $"{c.GetProperty("step").GetString()} > {c.GetProperty("operation").GetString()}")
+        );
+        Assert.Equal(["Bind Query"], operations[1].GetProperty("calledBy").EnumerateArray().Select(c => c.GetString()));
+        Assert.Equal(
+            ["Warning 1004 (line 6 \"Empty => 204 ? no exclude tokens are sent\"): Step looks like it calls operation `Parse Token`, which never returns `Empty`."],
+            json.Error.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        );
+        Assert.Contains("|BindFilter|BindExclude|Respond|Condition|", markdown.Output);
+        Assert.Contains("Calls [Parse Token](#parse-token) as a sub-operation.", markdown.Output);
+    }
+
+    [Fact]
     public async Task WarnsWhenSubOperationReturnIsUnhandled()
     {
         var result = await RunTestAsync("input.md -o output.md -f md",
