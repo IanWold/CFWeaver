@@ -69,6 +69,18 @@ static class Tool
           the output, so they're a good place for sources and assumptions. After a step, - lines are
           its results, and any other text is ignored.
 
+        Sub-operations:
+          A step with the same name as another operation is read as calling it, so its results should
+          be that operation's return values. CFWeaver warns if the step leaves one of them out, or has
+          a result the operation never returns. Each operation keeps its own scenario table:
+            # Get Item
+            * Authenticate: Valid | Invalid => 401
+            * Lookup: Found => 200 | NotFound => 404
+
+            # Authenticate
+            * CheckToken: Valid | Missing => Invalid
+            * LoadUser: Found => Valid | NotFound => Invalid
+
         Output:
           One row per path: the result taken at each step (blank where the path skipped the step), the
           returned value (Respond), the joined conditions, and one column per variable. Use -f md for a

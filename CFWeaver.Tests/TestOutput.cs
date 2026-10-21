@@ -167,6 +167,88 @@ public class TestOutput
     }
 
     [Fact]
+    public async Task WarnsWhenSubOperationReturnIsUnhandled()
+    {
+        var result = await RunTestAsync("input.md -o output.md -f md",
+            (
+                "input.md",
+                """
+                # My Endpoint
+
+                * Authenticate: Valid | Invalid => 403
+                * GetItem: Found => 200 | NotFound => 400 | Error => 500
+
+                # Authenticate
+
+                * CheckToken: Valid | Invalid => Invalid
+                * LoadUser: Found => Valid | NotFound => Invalid | Error => Error
+                """
+            )
+        );
+
+        Assert.Equal(
+            ["Warning 1003 (line 3 \"* Authenticate: Valid | Invalid => 403\"): Step looks like it calls operation `Authenticate`, but doesn't handle its return value `Error`."],
+            result.Error.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        );
+        Assert.Equal(0, result.ExitCode);
+        Assert.Contains("output.md", result.Files.Keys);
+    }
+
+    [Fact]
+    public async Task WarnsWhenSubOperationNeverReturnsResult()
+    {
+        var result = await RunTestAsync("input.md --check",
+            (
+                "input.md",
+                """
+                # My Endpoint
+
+                * Authenticate
+                    - Valid
+                    - Invalid => 403
+                    - Expired => 401
+                * GetItem: Found => 200 | NotFound => 404
+
+                # Authenticate
+
+                * Authenticate: Valid | Invalid => Invalid
+                * LoadUser: Found => Valid | NotFound => Invalid
+                """
+            )
+        );
+
+        Assert.Equal(
+            ["Warning 1004 (line 6 \"Expired => 401\"): Step looks like it calls operation `Authenticate`, which never returns `Expired`."],
+            result.Error.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        );
+        Assert.Equal(0, result.ExitCode);
+    }
+
+    [Fact]
+    public async Task SubOperationWithEveryReturnHandledHasNoWarnings()
+    {
+        var result = await RunTestAsync("input.md --check",
+            (
+                "input.md",
+                """
+                # My Endpoint
+
+                * Authenticate: Valid | Invalid => 403
+                * GetItem: Found => 200 | NotFound => 404
+
+                # Authenticate
+
+                * CheckToken: Valid | Invalid => Invalid
+                * LoadUser: Found => Valid | NotFound => Invalid
+                """
+            )
+        );
+
+        Assert.Empty(result.Error);
+        Assert.Equal(0, result.ExitCode);
+    }
+
+    [Fact]
     public async Task CheckSummarizesValidModelWithoutWritingOutput()
     {
         var result = await RunTestAsync("input.md --check",

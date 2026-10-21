@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace CFWeaver;
 
 static class Diagnostics
@@ -44,11 +46,13 @@ static class Diagnostics
     {
         internal record LineWarning(int Code, string Message)
         {
-            public Warning Warning(Line line) =>
-                new(Code, Message, line);
+            public Warning Warning(Line line, params string[] details) =>
+                new(Code, string.Format(CultureInfo.InvariantCulture, Message, details), line);
         }
 
         internal static readonly LineWarning StepUnreachable = new(1001, "No path reaches this step");
         internal static readonly LineWarning ReturnNamesStep = new(1002, "Result returns the name of a step; use `=` to go to that step");
+        internal static readonly LineWarning SubOperationReturnUnhandled = new(1003, "Step looks like it calls operation `{0}`, but doesn't handle its return value `{1}`");
+        internal static readonly LineWarning SubOperationNeverReturns = new(1004, "Step looks like it calls operation `{0}`, which never returns `{1}`");
     }
 }

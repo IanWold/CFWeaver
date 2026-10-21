@@ -80,6 +80,29 @@ public record Operation(string Name, IEnumerable<Step> Steps, string Description
         }
     }
 
+    internal IEnumerable<Warning> SubOperationWarnings(IEnumerable<Operation> operations)
+    {
+        foreach (var step in Steps)
+        {
+            if (operations.FirstOrDefault(o => o.Name == step.Name && !ReferenceEquals(o, this)) is not Operation subOperation)
+            {
+                continue;
+            }
+
+            var returns = subOperation.Scenarios.Select(s => s.Response).Distinct().ToList();
+
+            foreach (var unhandled in returns.Except(step.Results.Select(r => r.Name)))
+            {
+                yield return Diagnostics.Warnings.SubOperationReturnUnhandled.Warning(step.Line, subOperation.Name, unhandled);
+            }
+
+            foreach (var result in step.Results.Where(r => !returns.Contains(r.Name)))
+            {
+                yield return Diagnostics.Warnings.SubOperationNeverReturns.Warning(result.Line, subOperation.Name, result.Name);
+            }
+        }
+    }
+
     Table ResultTable
     {
         get

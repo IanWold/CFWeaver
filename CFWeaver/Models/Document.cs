@@ -43,5 +43,5 @@ public record Document(IEnumerable<Operation> Operations, string Description = "
     }
 
     internal IEnumerable<Warning> Warnings =>
-        Operations.SelectMany(o => o.Warnings);
+        Operations.SelectMany(o => o.Warnings.Concat(o.SubOperationWarnings(Operations)).OrderBy(w => w.Line.Number));
 }
