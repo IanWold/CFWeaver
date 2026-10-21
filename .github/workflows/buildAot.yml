@@ -8,7 +8,25 @@ permissions:
   contents: write
 
 jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Read version from release tag
+        id: version
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          VERSION="${TAG#v}"
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::Release tag '$TAG' must be a version like v1.2.3 or v1.2.3-beta"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
   build-linux-x64:
+    needs: version
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -23,7 +41,7 @@ jobs:
         run: dotnet restore
 
       - name: Publish AOT
-        run: dotnet publish CFWeaver/CFWeaver.csproj -c Release -r linux-x64 -o output/linux-x64
+        run: dotnet publish CFWeaver/CFWeaver.csproj -c Release -r linux-x64 -o output/linux-x64 -p:Version=${{ needs.version.outputs.version }}
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
@@ -33,6 +51,7 @@ jobs:
 
 #  TODO: make this work
 #  build-linux-arm64:
+#    needs: version
 #    runs-on: ubuntu-latest
 #    steps:
 #      - name: Checkout repository
@@ -55,7 +74,7 @@ jobs:
 #      - name: Publish AOT for Linux ARM64
 #        run: |
 #          sudo apt-get install -y clang llvm
-#          dotnet publish CFWeaver/CFWeaver.csproj -c Release -r linux-arm64 -o output/linux-arm64
+#          dotnet publish CFWeaver/CFWeaver.csproj -c Release -r linux-arm64 -o output/linux-arm64 -p:Version=${{ needs.version.outputs.version }}
 #
 #      - name: Upload Artifact
 #        uses: actions/upload-artifact@v4
@@ -64,6 +83,7 @@ jobs:
 #          path: output/linux-arm64
 
   build-windows-x86:
+    needs: version
     runs-on: windows-latest
     steps:
       - name: Checkout repository
@@ -78,7 +98,7 @@ jobs:
         run: dotnet restore
 
       - name: Publish AOT
-        run: dotnet publish CFWeaver/CFWeaver.csproj -c Release -r win-x86 -o output/win-x86
+        run: dotnet publish CFWeaver/CFWeaver.csproj -c Release -r win-x86 -o output/win-x86 -p:Version=${{ needs.version.outputs.version }}
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
@@ -87,6 +107,7 @@ jobs:
           path: output/win-x86
 
   build-windows-x64:
+    needs: version
     runs-on: windows-latest
     steps:
       - name: Checkout repository
@@ -101,7 +122,7 @@ jobs:
         run: dotnet restore
 
       - name: Publish AOT
-        run: dotnet publish CFWeaver/CFWeaver.csproj -c Release -r win-x64 -o output/win-x64
+        run: dotnet publish CFWeaver/CFWeaver.csproj -c Release -r win-x64 -o output/win-x64 -p:Version=${{ needs.version.outputs.version }}
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
@@ -110,6 +131,7 @@ jobs:
           path: output/win-x64
 
   build-windows-arm64:
+    needs: version
     runs-on: windows-latest
     steps:
       - name: Checkout repository
@@ -124,7 +146,7 @@ jobs:
         run: dotnet restore
 
       - name: Publish AOT
-        run: dotnet publish CFWeaver/CFWeaver.csproj -c Release -r win-arm64 -o output/win-arm64
+        run: dotnet publish CFWeaver/CFWeaver.csproj -c Release -r win-arm64 -o output/win-arm64 -p:Version=${{ needs.version.outputs.version }}
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
@@ -133,6 +155,7 @@ jobs:
           path: output/win-arm64
 
   build-macos-x64:
+    needs: version
     runs-on: macos-latest
     steps:
       - name: Checkout repository
@@ -147,7 +170,7 @@ jobs:
         run: dotnet restore
 
       - name: Publish AOT
-        run: dotnet publish CFWeaver/CFWeaver.csproj -c Release -r osx-x64 -o output/osx-x64
+        run: dotnet publish CFWeaver/CFWeaver.csproj -c Release -r osx-x64 -o output/osx-x64 -p:Version=${{ needs.version.outputs.version }}
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
@@ -156,6 +179,7 @@ jobs:
           path: output/osx-x64
 
   build-macos-arm64:
+    needs: version
     runs-on: macos-latest
     steps:
       - name: Checkout repository
@@ -170,7 +194,7 @@ jobs:
         run: dotnet restore
 
       - name: Publish AOT
-        run: dotnet publish CFWeaver/CFWeaver.csproj -c Release -r osx-arm64 -o output/osx-arm64
+        run: dotnet publish CFWeaver/CFWeaver.csproj -c Release -r osx-arm64 -o output/osx-arm64 -p:Version=${{ needs.version.outputs.version }}
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
